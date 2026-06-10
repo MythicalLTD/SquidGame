@@ -15,6 +15,93 @@ setup:
   arena-already-exist: "&cThere is already an arena with this name."
   arena-created: "&aThe arena has been created successfully! Use &b/squid editarena &e(name) &eto edit it."
   set-lobby: "&aYou have defined the lobby in your current position."
+  location-set: "&e{name} &aset in your current location."
+  region-set: "&e{name} &aset with your location wand &7({first}) ({second})"
+  unknown-game: "&cUnknown game &f{game}&c. Try &fmingle&c, &fglass&c, &ftug&c, or a game number."
+  no-wand: "&cYou don't have a region wand, use /squid wand to get it."
+  wand-incomplete: "&cYou need to set an area with your region wand first."
+  rooms-cleared: "&e{name} &crooms cleared."
+  world-set: "&eArena map &aset in your current world."
+  wand:
+    first-point: "&aSet &dfirst &apoint &7(&e{point}&7)"
+    second-point: "&aSet &bsecond &apoint &7(&e{point}&7)"
+
+commands:
+  help:
+    header: "\n&7&kA&r &b&lSQUIDWARS &7&kA&r"
+    entry: "&d/squid {name} &8- &f{description}"
+  descriptions:
+    createarena: "Create a new arena in your current world"
+    deletearena: "Delete an arena"
+    listarena: "List loaded arenas"
+    setlobby: "Set the lobby at your current location"
+    editarena: "Edit an arena"
+    wand: "Give yourself the region wand"
+    revive: "Revive a dead player"
+    reload: "Reload plugin configuration"
+    stoparena: "Stop and reset an arena"
+    skipgame: "Skip the current game"
+    settime: "Set an arena timer"
+    troll: "Run a harmless troll effect"
+    revealglass: "Reveal correct Glass Bridge tiles"
+    leave: "Leave your current game"
+    join: "Join a random game"
+    start: "Force the game to start"
+  deletearena:
+    deleted: "&aArena &f{arena} &awas deleted."
+  listarena:
+    empty: "&cThere are no arenas loaded."
+    header: "&d&lSquid&f&lGame &8- &fArenas &7({count})"
+    entry: "&d- &f{arena} &8| &7State: &f{state} &8| &7Players: &f{players}/{max}"
+  revive:
+    not-loaded: "&cThat player is not loaded."
+    not-in-game: "&cThat player is not in a game."
+    not-dead: "&cThat player is not dead."
+    arena-finishing: "&cThat arena is already finishing."
+    target: "&aYou have been revived."
+    sender: "&aRevived &f{player}&a."
+    failed: "&cCould not revive that player."
+  reload:
+    done: "&aConfiguration files reloaded and missing defaults merged."
+  stoparena:
+    done: "&aArena &f{arena} &ahas been stopped and reset."
+  skipgame:
+    done: "&aArena &f{arena} &ahas skipped to &f{game}&a."
+    no-next: "&cThat arena does not have another queued game."
+  revealglass:
+    done: "&aRevealing &f{count} &acorrect glass tiles in arena &f{arena}&a."
+    not-glass: "&cThat arena is not currently running Glass Bridge."
+    no-tiles: "&cThere are no glass tiles to reveal yet."
+  settime:
+    done: "&aArena &f{arena} &atimer set to &f{time} &aseconds."
+  start:
+    not-enough: "&cYou need at least &f{min} &cplayers to start. Current: &f{players}&c."
+  troll:
+    done: "&aTrolled &f{player} &awith &f{action}&a."
+    unknown: "&cUnknown troll action."
+    fakekill:
+      title: "&4You have been eliminated"
+      subtitle: "&7Just kidding."
+  gamemode:
+    creative: "&aYour gamemode has been set to &fCreative&a."
+    survival: "&aYour gamemode has been set to &fSurvival&a."
+  build:
+    enabled: "&aBuild mode enabled. You can now edit arena blocks."
+  fly:
+    enabled: "&aFlight enabled for &f{player}&a."
+    disabled: "&cFlight disabled for &f{player}&c."
+    enabled-target: "&aFlight enabled."
+    disabled-target: "&cFlight disabled."
+
+items:
+  region-wand: "&dRegion wand &7(Left/Right click)"
+  start-game: "&aStart Game &7(Right click)"
+  glass-bridge-solver: "&bSolve Glass Bridge &7(Admin)"
+  partner-selector: "&bPartner Selector"
+  marble-pouch: "&bMarble Pouch"
+  tug-of-war-rope: "&eTug of War Rope"
+  hide-and-seek-keys: "&9Hide and Seek Keys"
+  seeker-knife: "&cSeeker Knife"
 
 events:
   intermission:
@@ -23,6 +110,7 @@ events:
   game-start:
     title: "&6Go Ahead!"
     subtitle: "&aGood Luck"
+  game-skipped-min-players: "&eSkipped &f{game} &ebecause it needs &f{min} &eplayers and only &f{players} &eremain."
   game-timeout:
     title: "&cIt's over!"
     subtitle: "&etime is over"
@@ -39,10 +127,12 @@ events:
     winner:
       title: "&d&lFinished"
       subtitle: "&b%squidgame_arena_winner% &ehas won the game"
+    proxy-kick: "&6Thanks for playing Squid Game! &eThe arena has ended."
 
 games:
   first:
-    name: "&cRed Light &7| &aGreen Light"
+    name: "&cRed Light&7, &aGreen Light"
+    all-crossed: "&aAll players crossed the goal zone!"
     tutorial:
       "1": 
         title: "&6&l1"
@@ -77,8 +167,61 @@ games:
       "4":
         title: "&6&l4"
         subtitle: "&eGood luck surviving"
+  fourth:
+    name: "&bMarbles"
+    select-partner: "&eRight-click another player with the Partner Selector to pair up."
+    already-partnered: "&cYou already have a partner."
+    target-partnered: "&cThat player already has a partner."
+    round-result: "&eYour partner held &f{amount} &emarbles. It was &f{result}&e."
+    partner-guess: "&e{player} guessed &f{guess} &eand wagered &f{wager} &emarbles."
+    partnered: "&aYou are partnered with &f{player}&a."
+    lost:
+      title: "&4You lost your marbles"
+      subtitle: "&cYou have been eliminated"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eChoose a partner before the game starts"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eEach player starts with 10 marbles"
+      "3":
+        title: "&6&l3"
+        subtitle: "&eGuess odd or even and wager your marbles"
+      "4":
+        title: "&6&l4"
+        subtitle: "&eTake all 10 marbles from your partner to survive"
+  fifth:
+    name: "&eTug of War"
+    start:
+      title: "&eTug of War"
+      subtitle: "&fRight-click the rope or spam sneak to pull"
+    sudden-death:
+      title: "&cSudden death"
+      subtitle: "&eTie game! First team to pull ahead wins"
+    finish:
+      title: "&eThe rope has snapped"
+      subtitle: "&cThe losing team falls"
+    lost:
+      title: "&4You fell"
+      subtitle: "&cYou have been eliminated"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eYou will be split into two teams"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eEach team starts on a raised platform"
+      "3":
+        title: "&6&l3"
+        subtitle: "&eRight-click the rope item or spam sneak to pull"
+      "4":
+        title: "&6&l4"
+        subtitle: "&cIf tied, sudden death decides the rope"
   sixth:
-    name: "&bGlasses"
+    name: "&bGlass Bridge"
+    solver:
+      confirm: "&ePress the solver item again to reveal the correct bridge for everyone."
     tutorial:
       "2":
         title: "&6&l1"
@@ -92,18 +235,180 @@ games:
       "1":
         title: "&6&l4"
         subtitle: "&eTo win you must get to the other side of the arena"
-  seventh:
-    name: "&dSquid&fGame"
+  mingle:
+    name: "&dMingle"
+    explain: "&d&lMingle:&f Vote if you want to play. If Mingle starts, a number will be called and you must enter a room with exactly that many players."
+    started: "&dMingle is starting. &fSurvive &e{rounds} &frounds by matching the called group size."
+    not-configured:
+      title: "&cMingle is not configured"
+      subtitle: "&eAdd rooms in /squid editarena"
+    round:
+      title: "&d&lMingle"
+      subtitle: "&eGroups of &f{size}&e! Get in a room!"
+      chat: "&dRound &f{round}&7/&f{rounds}&d: make groups of &f{size}&d. You have &f{time}s &dto get into a room."
+    countdown: "&c{time}s left! &eYour room must contain exactly &f{size} &eplayers."
+    pass:
+      title: "&aRoom accepted"
+      subtitle: "&eYour group has the right number"
+      chat: "&aYour room is safe with exactly &f{size} &aplayers."
+    fail:
+      outside: "&cYou were not inside a Mingle room."
+      wrong-size: "&cYour room had &f{size} &cplayers, but it needed exactly &f{needed}&c."
+    eliminated:
+      title: "&cWrong group"
+      subtitle: "&ePlayers outside valid rooms are eliminated"
+    vote:
+      gui-title: "&dVote: Play Mingle?"
+      info: "&dMingle vote opened. &f{needed} &eskip votes are needed to skip this game."
+      play:
+        name: "&aPlay Mingle"
+        lore: "&7Keep Mingle in the rotation.\n&eYou will need exact room groups."
+      skip:
+        name: "&cSkip Mingle"
+        lore: "&7Skip Mingle and move on.\n&eNeeds enough player votes."
+      voted-play: "&aYou voted to play Mingle. &7Play: &f{play} &8| &7Skip: &f{skip}&7/&f{needed}"
+      voted-skip: "&cYou voted to skip Mingle. &7Skip: &f{skip}&7/&f{needed} &8| &7Play: &f{play}"
+      status: "&dMingle vote: &aPlay &f{play} &8| &cSkip &f{skip}&7/&f{needed}"
+      skipped:
+        title: "&cMingle skipped"
+        subtitle: "&ePlayers voted to move to the next game"
+        chat: "&cMingle was skipped by vote. &eMoving to the next game..."
     tutorial:
       "1":
         title: "&6&l1"
-        subtitle: "&eYou must push your enemies out of the arena"
+        subtitle: "&eStand on the center platform"
       "2":
         title: "&6&l2"
-        subtitle: "&eIf a player is out, they will be eliminated"
-      "3": 
+        subtitle: "&eA group number will be called"
+      "3":
         title: "&6&l3"
-        subtitle: "&eIf a player dies, they will also be eliminated"
+        subtitle: "&eEnter a room with exactly that many players"
       "4":
         title: "&6&l4"
-        subtitle: "&eYou will win if you are the last one standing"
+        subtitle: "&cWrong room sizes and late players are eliminated"
+  hide-and-seek:
+    name: "&9Hide and Seek"
+    not-configured:
+      title: "&cHide and Seek is not configured"
+      subtitle: "&eSet the exit zone in /squid editarena"
+    hider:
+      title: "&9Blue Team"
+      subtitle: "&eHide, survive, or reach the exit"
+    seeker:
+      title: "&cRed Team"
+      subtitle: "&eWait for release, then catch a hider"
+    release:
+      title: "&cSeekers released"
+      subtitle: "&eThe hunt begins"
+    seeker-pass:
+      title: "&aKill confirmed"
+      subtitle: "&eYou have caught a hider"
+    door-opened: "&aYou used a key to open the iron door."
+    finish:
+      title: "&9Hide and Seek is over"
+      subtitle: "&eSeekers without a catch are eliminated"
+    lost:
+      title: "&4You failed"
+      subtitle: "&cYou have been eliminated"
+    trap:
+      title: "&4Trap floor"
+      subtitle: "&cBlue glass eliminated you"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eBlue players hide while red players wait"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eSeekers must catch at least one hider"
+      "3":
+        title: "&6&l3"
+        subtitle: "&eHiders survive by escaping or lasting to the end"
+      "4":
+        title: "&6&l4"
+        subtitle: "&cSeekers who catch nobody are eliminated"
+  jump-rope:
+    name: "&eJump Rope"
+    not-configured:
+      title: "&cJump Rope is not configured"
+      subtitle: "&eSet bridge and goal in /squid editarena"
+    swing:
+      title: "&cJump!"
+      subtitle: "&eThe rope is sweeping the bridge"
+    warning:
+      title: "&eGet ready!"
+      subtitle: "&cThe rope is about to sweep"
+    hit:
+      title: "&4Hit by the rope"
+      subtitle: "&cYou have been eliminated"
+    lost:
+      title: "&4You did not cross"
+      subtitle: "&cYou have been eliminated"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eCross the narrow bridge"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eJump when the rope sweeps across"
+      "3":
+        title: "&6&l3"
+        subtitle: "&cFalling into the gap eliminates you"
+      "4":
+        title: "&6&l4"
+        subtitle: "&eReach the far side before time runs out"
+  final-dinner:
+    name: "&6Final Dinner"
+    finish:
+      title: "&6Dinner is over"
+      subtitle: "&eOnly one player may leave"
+    failed:
+      title: "&4No winner"
+      subtitle: "&cYou failed to eliminate everyone else"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eYou have reached the final dinner"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eKnives are on the table"
+      "3":
+        title: "&6&l3"
+        subtitle: "&eEliminate every rival before time runs out"
+      "4":
+        title: "&6&l4"
+        subtitle: "&cIf more than one player remains, everyone dies"
+  sky-squid:
+    name: "&6Sky Squid Game"
+    square:
+      title: "&eSquare Tower"
+    triangle:
+      title: "&aTriangle Tower"
+    circle:
+      title: "&cCircle Tower"
+    round:
+      subtitle: "&eEliminate at least one player before time runs out"
+    kill:
+      title: "&cElimination counted"
+      subtitle: "&eThe tower requirement is met"
+    no-kill:
+      title: "&4No elimination"
+      subtitle: "&cEveryone has failed the final game"
+    finish:
+      title: "&6Sky Squid Game complete"
+      subtitle: "&eOnly one player will survive"
+    spectator:
+      title: "&7You are dead"
+      subtitle: "&eWatch the final game from the spectator area"
+    tutorial:
+      "1":
+        title: "&6&l1"
+        subtitle: "&eFight on the square, triangle, and circle towers"
+      "2":
+        title: "&6&l2"
+        subtitle: "&eEach tower requires at least one elimination"
+      "3":
+        title: "&6&l3"
+        subtitle: "&cIf no one is eliminated, everyone dies"
+      "4":
+        title: "&6&l4"
+        subtitle: "&eAfter the circle tower, one winner remains"

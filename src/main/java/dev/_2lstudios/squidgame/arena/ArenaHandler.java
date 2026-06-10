@@ -9,6 +9,7 @@ import org.bukkit.Color;
 import dev._2lstudios.jelly.config.Configuration;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class ArenaHandler {
     private final Arena arena;
@@ -26,14 +27,19 @@ public class ArenaHandler {
     }
 
     public void handlePlayerJoin(final SquidPlayer player) {
-        arena.broadcastMessage("arena.join");
+        if (!this.isProxySilent()) {
+            arena.broadcastMessage("arena.join");
+        }
+
         player.sendScoreboard(this.arena.getState().toString().toLowerCase());
 
         if (arena.getState() == ArenaState.WAITING) {
             if (arena.getPlayers().size() >= arena.getMinPlayers()) {
                 arena.setInternalTime(this.mainConfig.getInt("game-settings.starting-time", 30));
                 arena.setState(ArenaState.STARTING);
-                arena.broadcastMessage("arena.starting");
+                if (!this.isProxySilent()) {
+                    arena.broadcastMessage("arena.starting");
+                }
             }
         }
     }
@@ -44,18 +50,26 @@ public class ArenaHandler {
         }
 
         else if (this.arena.getState() == ArenaState.WAITING || this.arena.getState() == ArenaState.STARTING) {
-            arena.broadcastMessage("arena.leave");
+            if (!this.isProxySilent()) {
+                arena.broadcastMessage("arena.leave");
+            }
 
-            if (arena.getPlayers().size() < arena.getMinPlayers() && arena.getState() == ArenaState.STARTING) {
+            if (!arena.isForceStarted() && arena.getPlayers().size() < arena.getMinPlayers()
+                    && arena.getState() == ArenaState.STARTING) {
                 arena.setState(ArenaState.WAITING);
-                arena.broadcastMessage("arena.no-enough-players");
+                if (!this.isProxySilent()) {
+                    arena.broadcastMessage("arena.no-enough-players");
+                }
                 arena.setInternalTime(this.mainConfig.getInt("game-settings.starting-time", 30));
             }
         }
     }
 
     public void handleArenaStart() {
-        arena.broadcastMessage("arena.started");
+        arena.removeStartItems();
+        if (!this.isProxySilent()) {
+            arena.broadcastMessage("arena.started");
+        }
         arena.nextGame();
         arena.broadcastSound(this.mainConfig.getSound("game-settings.sounds.arena-start", "ORB_PICKUP"));
     }
@@ -63,12 +77,16 @@ public class ArenaHandler {
     public void handleArenaTick() {
         if (arena.getState() == ArenaState.STARTING) {
             if (arena.getInternalTime() == 10) {
-                arena.broadcastMessage("arena.starting");
+                if (!this.isProxySilent()) {
+                    arena.broadcastMessage("arena.starting");
+                }
                 arena.broadcastSound(this.mainConfig.getSound("game-settings.sounds.arena-starting", "CLICK"));
             }
 
             else if (arena.getInternalTime() <= 5 && arena.getInternalTime() > 0) {
-                arena.broadcastMessage("arena.starting");
+                if (!this.isProxySilent()) {
+                    arena.broadcastMessage("arena.starting");
+                }
                 arena.broadcastSound(this.mainConfig.getSound("game-settings.sounds.arena-countdown", "NOTE_PLING"));
             }
 
@@ -79,16 +97,17 @@ public class ArenaHandler {
 
         else if (arena.getState() == ArenaState.EXPLAIN_GAME) {
             if (arena.getInternalTime() == 0) {
-                this.arena.setState(ArenaState.IN_GAME);
                 this.arena.setInternalTime(this.arena.getCurrentGame().getGameTime());
+                this.arena.setState(ArenaState.IN_GAME);
+                this.arena.setPvPAllowed(false);
                 this.arena.getCurrentGame().onStart();
             }
         }
 
         else if (arena.getState() == ArenaState.IN_GAME) {
             if (arena.getInternalTime() == 0) {
-                this.arena.setState(ArenaState.FINISHING_GAME);
                 this.arena.setInternalTime(this.mainConfig.getInt("game-settings.finishing-time", 5));
+                this.arena.setState(ArenaState.FINISHING_GAME);
                 this.arena.getCurrentGame().onTimeUp();
             }
         }
@@ -101,27 +120,31 @@ public class ArenaHandler {
 
         else if (arena.getState() == ArenaState.INTERMISSION) {
             if (arena.getInternalTime() == 0) {
+                arena.setInternalTime(15);
                 arena.setState(ArenaState.EXPLAIN_GAME);
                 arena.teleportAllPlayers(arena.getSpawnPosition());
-                arena.setInternalTime(15);
+                arena.setPvPAllowed(false);
                 arena.getCurrentGame().onExplainStart();
             }
         }
 
         else if (arena.getState() == ArenaState.FINISHING_ARENA) {
-            final SquidPlayer winner = this.arena.calculateWinner();
-            if (winner != null && this.mainConfig.getBoolean("game-settings.spawn-fireworks-on-win", true)) {
-                winner.spawnFirework(1, 1, Color.RED, true);
-            }
+            this.playFinishCelebration();
 
             if (arena.getInternalTime() == 0) {
+                this.kickProxyPlayers();
                 arena.resetArena();
             }
         }
     }
 
+    private boolean isProxySilent() {
+        return this.mainConfig.getBoolean("game-settings.proxy-mode.enabled", false)
+                && this.mainConfig.getBoolean("game-settings.proxy-mode.silent-arena-messages", true);
+    }
+
     public void handleArenaFinish(final ArenaFinishReason reason) {
-        this.arena.setInternalTime(this.mainConfig.getInt("game-settings.finishing-time", 5));
+        this.arena.setInternalTime(this.getFinishingTime());
 
         switch (reason) {
         case ALL_PLAYERS_DEATH:
@@ -142,6 +165,39 @@ public class ArenaHandler {
             break;
         case PLUGIN_STOP:
             break;
+        }
+    }
+
+    private int getFinishingTime() {
+        if (this.mainConfig.getBoolean("game-settings.proxy-mode.enabled", false)) {
+            return this.mainConfig.getInt("game-settings.proxy-mode.finish-kick-delay", 8);
+        }
+
+        return this.mainConfig.getInt("game-settings.finishing-time", 5);
+    }
+
+    private void playFinishCelebration() {
+        if (!this.mainConfig.getBoolean("game-settings.spawn-fireworks-on-win", true)) {
+            return;
+        }
+
+        final SquidPlayer winner = this.arena.calculateWinner();
+        final Color color = winner == null ? Color.AQUA : Color.RED;
+
+        for (final SquidPlayer player : this.arena.getAllPlayers()) {
+            player.spawnFirework(1, 1, color, true);
+        }
+    }
+
+    private void kickProxyPlayers() {
+        if (!this.mainConfig.getBoolean("game-settings.proxy-mode.enabled", false)
+                || !this.mainConfig.getBoolean("game-settings.proxy-mode.kick-on-finish", true)) {
+            return;
+        }
+
+        for (final SquidPlayer player : new ArrayList<>(this.arena.getAllPlayers())) {
+            player.getBukkitPlayer()
+                    .kickPlayer(MessageUtils.format(SquidGame.getInstance(), "events.finish.proxy-kick"));
         }
     }
 }

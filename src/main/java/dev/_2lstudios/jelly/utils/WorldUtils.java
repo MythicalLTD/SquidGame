@@ -8,6 +8,10 @@ import org.bukkit.World.Environment;
 
 public class WorldUtils {
     public static World getWorldSafe(final String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return null;
+        }
+
         World world = Bukkit.getWorld(name);
 
         if (world == null) {

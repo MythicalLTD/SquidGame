@@ -1,6 +1,7 @@
 package dev._2lstudios.jelly.commands;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import dev._2lstudios.jelly.annotations.Command;
@@ -11,6 +12,10 @@ public abstract class CommandListener {
 
     public void addSubcommand(final CommandListener obj) {
         this.subcommands.add(obj);
+    }
+
+    public List<CommandListener> getSubcommands() {
+        return Collections.unmodifiableList(this.subcommands);
     }
 
     public CommandListener getSubcommand(final String name) {
@@ -40,6 +45,10 @@ public abstract class CommandListener {
         }
 
         return output;
+    }
+
+    public List<String> tabComplete(final CommandContext context, final String[] args) {
+        return Collections.emptyList();
     }
 
     public abstract void handle(final CommandContext context) throws Exception;

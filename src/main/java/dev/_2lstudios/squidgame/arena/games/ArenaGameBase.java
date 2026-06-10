@@ -63,6 +63,10 @@ public abstract class ArenaGameBase {
         return this.gameTime;
     }
 
+    public int getMinPlayers() {
+        return 1;
+    }
+
     public Arena getArena() {
         return this.arena;
     }

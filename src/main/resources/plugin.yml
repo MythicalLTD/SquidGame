@@ -14,3 +14,11 @@ commands:
   squidgame:
     aliases: ["sg", "sq", "squid"]
     description: "This is an example plugin."
+  gmc:
+    description: "Switch to creative mode."
+  gms:
+    description: "Switch to survival mode."
+  fly:
+    description: "Toggle flight."
+  build:
+    description: "Enable admin build mode."

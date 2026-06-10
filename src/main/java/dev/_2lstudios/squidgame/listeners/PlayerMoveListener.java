@@ -8,13 +8,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import dev._2lstudios.jelly.math.Vector3;
-import dev._2lstudios.jelly.utils.BlockUtils;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.arena.ArenaState;
 import dev._2lstudios.squidgame.arena.games.G1RedGreenLightGame;
+import dev._2lstudios.squidgame.arena.games.G10HideAndSeekGame;
+import dev._2lstudios.squidgame.arena.games.G11JumpRopeGame;
 import dev._2lstudios.squidgame.arena.games.G6GlassesGame;
-import dev._2lstudios.squidgame.arena.games.G7SquidGame;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 
 public class PlayerMoveListener implements Listener {
@@ -50,6 +50,8 @@ public class PlayerMoveListener implements Listener {
             }
 
             else if (arena.getState() == ArenaState.IN_GAME) {
+                game.handleMove(player, e.getTo());
+
                 if (!game.isCanWalk()) {
                     final Vector3 playerPosition = new Vector3(e.getTo().getX(), e.getTo().getY(), e.getTo().getZ());
                     if (game.getKillZone().isBetween(playerPosition)) {
@@ -67,25 +69,21 @@ public class PlayerMoveListener implements Listener {
             if (block != null && block.getType() == Material.GLASS) {
                 final G6GlassesGame game = (G6GlassesGame) arena.getCurrentGame();
 
-                if (game.isFakeBlock(loc.getBlock())) {
-                    BlockUtils.destroyBlockGroup(loc.getBlock());
+                if (game.breakFakeBlock(loc.getBlock())) {
                     arena.broadcastSound(
                             this.plugin.getMainConfig().getSound("game-settings.sounds.glass-break", "GLASS"));
                 }
             }
         }
 
-        /* Game 7: Handling */
-        else if (arena.getCurrentGame() instanceof G7SquidGame) {
-            final Location loc = e.getTo().clone();
-            final String killBlock = arena.getConfig().getString("games.seventh.kill-block", "sand");
+        /* Game 10: Handling */
+        else if (arena.getCurrentGame() instanceof G10HideAndSeekGame && arena.getState() == ArenaState.IN_GAME) {
+            ((G10HideAndSeekGame) arena.getCurrentGame()).handleMove(player, e.getTo());
+        }
 
-            loc.subtract(0, 1, 0);
-
-            if (loc.getBlock() != null && loc.getBlock().getType() != null
-                    && loc.getBlock().getType().toString().equalsIgnoreCase(killBlock)) {
-                arena.killPlayer(player);
-            }
+        /* Game 11: Handling */
+        else if (arena.getCurrentGame() instanceof G11JumpRopeGame && arena.getState() == ArenaState.IN_GAME) {
+            ((G11JumpRopeGame) arena.getCurrentGame()).handleMove(player, e.getFrom(), e.getTo());
         }
     }
 }

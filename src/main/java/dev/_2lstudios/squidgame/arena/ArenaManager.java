@@ -68,6 +68,20 @@ public class ArenaManager {
         return null;
     }
 
+    public Arena getProxyArena() throws NoAvailableArenaException, ArenaMisconfiguredException {
+        for (final Arena arena : this.arenas) {
+            if (arena.isLobbyConfigured()) {
+                return arena;
+            }
+        }
+
+        if (!this.arenas.isEmpty()) {
+            throw new ArenaMisconfiguredException();
+        }
+
+        throw new NoAvailableArenaException();
+    }
+
     public Arena createArena(final String name, final World world) throws ArenaAlreadyExistException, IOException {
         if (this.getArena(name) != null) {
             throw new ArenaAlreadyExistException(name);
@@ -81,11 +95,39 @@ public class ArenaManager {
         return arena;
     }
 
+    public boolean deleteArena(final String name) throws IOException {
+        final Arena arena = this.getArena(name);
+
+        if (arena == null) {
+            return false;
+        }
+
+        arena.resetArena();
+        this.arenas.remove(arena);
+
+        final File arenaFile = new File(this.arenasPath, arena.getName() + ".yml");
+        if (arenaFile.exists() && !arenaFile.delete()) {
+            throw new IOException("Could not delete arena file " + arenaFile.getName());
+        }
+
+        return true;
+    }
+
     public Arena getFirstAvailableArena() throws NoAvailableArenaException, ArenaMisconfiguredException {
+        boolean foundAvailableArena = false;
+
         for (final Arena arena : arenas) {
             if (arena.getState() == ArenaState.WAITING || arena.getState() == ArenaState.STARTING) {
-                return arena;
+                foundAvailableArena = true;
+
+                if (arena.isLobbyConfigured()) {
+                    return arena;
+                }
             }
+        }
+
+        if (foundAvailableArena) {
+            throw new ArenaMisconfiguredException();
         }
 
         throw new NoAvailableArenaException();

@@ -10,18 +10,26 @@ import dev._2lstudios.jelly.config.Configuration;
 
 import dev._2lstudios.squidgame.arena.ArenaManager;
 import dev._2lstudios.squidgame.commands.SquidGameCommand;
+import dev._2lstudios.squidgame.commands.admin.BuildCommand;
+import dev._2lstudios.squidgame.commands.admin.FlyCommand;
+import dev._2lstudios.squidgame.commands.admin.GamemodeCreativeCommand;
+import dev._2lstudios.squidgame.commands.admin.GamemodeSurvivalCommand;
 import dev._2lstudios.squidgame.hooks.PlaceholderAPIHook;
 import dev._2lstudios.squidgame.hooks.ScoreboardHook;
 import dev._2lstudios.squidgame.listeners.AsyncPlayerChatListener;
 import dev._2lstudios.squidgame.listeners.BlockBreakListener;
 import dev._2lstudios.squidgame.listeners.BlockPlaceListener;
 import dev._2lstudios.squidgame.listeners.EntityDamageListener;
+import dev._2lstudios.squidgame.listeners.FireProtectionListener;
 import dev._2lstudios.squidgame.listeners.FoodLevelChangeListener;
 import dev._2lstudios.squidgame.listeners.PlayerDeathListener;
+import dev._2lstudios.squidgame.listeners.PlayerInteractEntityListener;
 import dev._2lstudios.squidgame.listeners.PlayerInteractListener;
 import dev._2lstudios.squidgame.listeners.PlayerJoinListener;
 import dev._2lstudios.squidgame.listeners.PlayerMoveListener;
 import dev._2lstudios.squidgame.listeners.PlayerQuitListener;
+import dev._2lstudios.squidgame.listeners.PlayerToggleSneakListener;
+import dev._2lstudios.squidgame.listeners.WeatherLockListener;
 import dev._2lstudios.squidgame.player.PlayerManager;
 import dev._2lstudios.squidgame.tasks.ArenaTickTask;
 
@@ -56,18 +64,26 @@ public class SquidGame extends JellyPlugin {
 
         // Register commands
         this.addCommand(new SquidGameCommand());
+        this.addCommand(new GamemodeCreativeCommand());
+        this.addCommand(new GamemodeSurvivalCommand());
+        this.addCommand(new FlyCommand());
+        this.addCommand(new BuildCommand());
 
         // Register listeners
         this.addEventListener(new AsyncPlayerChatListener(this));
         this.addEventListener(new BlockBreakListener(this));
         this.addEventListener(new BlockPlaceListener(this));
         this.addEventListener(new EntityDamageListener(this));
+        this.addEventListener(new FireProtectionListener(this));
         this.addEventListener(new FoodLevelChangeListener(this));
         this.addEventListener(new PlayerDeathListener(this));
+        this.addEventListener(new PlayerInteractEntityListener(this));
         this.addEventListener(new PlayerInteractListener(this));
         this.addEventListener(new PlayerJoinListener(this, scoreboardHook));
         this.addEventListener(new PlayerMoveListener(this));
         this.addEventListener(new PlayerQuitListener(this));
+        this.addEventListener(new PlayerToggleSneakListener(this));
+        this.addEventListener(new WeatherLockListener(this));
 
         // Register player manager
         this.setPluginPlayerManager(this.playerManager);
@@ -82,6 +98,9 @@ public class SquidGame extends JellyPlugin {
         this.getMainConfig();
         this.getMessagesConfig();
         this.getScoreboardConfig();
+        this.applyWeatherLock();
+        this.applyFireProtection();
+        this.applyChatNoiseProtection();
 
         // Banner
         this.getLogger().log(Level.INFO, "§7§m==========================================================");
@@ -122,6 +141,42 @@ public class SquidGame extends JellyPlugin {
 
     public ScoreboardHook getScoreboardHook() {
         return scoreboardHook;
+    }
+
+    private void applyWeatherLock() {
+        if (!this.getMainConfig().getBoolean("game-settings.proxy-mode.enabled", false)
+                || !this.getMainConfig().getBoolean("game-settings.proxy-mode.lock-weather", true)) {
+            return;
+        }
+
+        for (final org.bukkit.World world : Bukkit.getWorlds()) {
+            world.setStorm(false);
+            world.setThundering(false);
+            world.setWeatherDuration(Integer.MAX_VALUE);
+            world.setThunderDuration(0);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyFireProtection() {
+        if (!this.getMainConfig().getBoolean("game-settings.disable-fire-spread", true)) {
+            return;
+        }
+
+        for (final org.bukkit.World world : Bukkit.getWorlds()) {
+            world.setGameRuleValue("doFireTick", "false");
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void applyChatNoiseProtection() {
+        if (!this.getMainConfig().getBoolean("game-settings.disable-advancement-announcements", true)) {
+            return;
+        }
+
+        for (final org.bukkit.World world : Bukkit.getWorlds()) {
+            world.setGameRuleValue("announceAdvancements", "false");
+        }
     }
 
     /* Static instance */

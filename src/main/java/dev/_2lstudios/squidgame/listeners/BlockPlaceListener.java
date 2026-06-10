@@ -1,5 +1,6 @@
 package dev._2lstudios.squidgame.listeners;
 
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -22,8 +23,12 @@ public class BlockPlaceListener implements Listener {
         final SquidPlayer squidPlayer = (SquidPlayer) this.plugin.getPlayerManager().getPlayer(bukkitPlayer);
         final Arena arena = squidPlayer.getArena();
 
-        if (arena != null) {
+        if (arena != null && !this.canBuildInArena(bukkitPlayer)) {
             e.setCancelled(true);
         }
+    }
+
+    private boolean canBuildInArena(final Player player) {
+        return player.getGameMode() == GameMode.CREATIVE && player.hasPermission("squidgame.admin");
     }
 }

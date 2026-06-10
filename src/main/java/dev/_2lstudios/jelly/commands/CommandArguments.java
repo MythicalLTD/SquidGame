@@ -12,11 +12,15 @@ public class CommandArguments {
 
     /* Generic getters */
     public Object get(final int index) {
-        if (args.length < index) {
+        if (args.length <= index) {
             return null;
         }
 
         return this.args[index];
+    }
+
+    public int size() {
+        return this.args.length;
     }
 
     public Object get(final int index, final Object defaultValue) {

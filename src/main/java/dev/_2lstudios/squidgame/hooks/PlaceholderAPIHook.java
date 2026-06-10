@@ -34,6 +34,11 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
         return plugin.getDescription().getVersion();
     }
 
+    @Override
+    public boolean persist() {
+        return true;
+    }
+
     /* Static Formatter */
     public static String formatString(final String text, final Player player) {
         if (enabled) {
@@ -74,7 +79,7 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
             case "required":
                 return arena.getMinPlayers() + "";
             case "time":
-                return arena.getInternalTime() + "";
+                return Math.max(0, arena.getInternalTime()) + "";
             case "spectators":
                 return arena.getSpectators().size() + "";
             case "game":

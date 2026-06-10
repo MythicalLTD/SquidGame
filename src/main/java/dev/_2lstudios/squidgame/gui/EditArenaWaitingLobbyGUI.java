@@ -6,7 +6,9 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import dev._2lstudios.jelly.gui.InventoryGUI;
+import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class EditArenaWaitingLobbyGUI extends InventoryGUI {
 
@@ -30,11 +32,11 @@ public class EditArenaWaitingLobbyGUI extends InventoryGUI {
         case 0:
             this.arena.getConfig().setLocation("arena.prelobby", player.getLocation(), false);
             this.arena.getConfig().setLocation("arena.waiting_room", player.getLocation(), false);
-            player.sendMessage("§eWaiting room spawn§a has set to your current position.");
+            MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}", "Waiting room spawn");
             break;
         case 1:
             this.arena.getConfig().set("arena.world", player.getWorld().getName());
-            player.sendMessage("§eArena map §a set in your current world.");
+            MessageUtils.send(SquidGame.getInstance(), player, "setup.world-set");
             break;
         case 99:
             this.back(player);

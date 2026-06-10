@@ -16,9 +16,18 @@ public class PlayerQuitListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(final PlayerQuitEvent e) {
+        if (this.isProxySilent()) {
+            e.setQuitMessage(null);
+        }
+
         final SquidPlayer squidPlayer = (SquidPlayer) this.plugin.getPlayerManager().getPlayer(e.getPlayer());
         if (squidPlayer != null && squidPlayer.getArena() != null) {
             squidPlayer.getArena().removePlayer(squidPlayer);
         }
+    }
+
+    private boolean isProxySilent() {
+        return this.plugin.getMainConfig().getBoolean("game-settings.proxy-mode.enabled", false)
+                && this.plugin.getMainConfig().getBoolean("game-settings.proxy-mode.silent-arena-messages", true);
     }
 }

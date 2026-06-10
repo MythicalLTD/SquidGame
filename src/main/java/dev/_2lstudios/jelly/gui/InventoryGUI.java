@@ -16,12 +16,13 @@ public abstract class InventoryGUI {
     private final Map<Integer, Integer> items;
     private final Inventory inventory;
     private InventoryGUI prevGui;
+    private boolean initialized;
 
     public InventoryGUI(final String name, final int size, final InventoryGUI prevGui) {
         this.items = new HashMap<>();
         this.inventory = Bukkit.createInventory(null, size, name);
         this.prevGui = prevGui;
-        this.init();
+        this.initialized = false;
     }
 
     public InventoryGUI(final String name, final int size) {
@@ -45,6 +46,11 @@ public abstract class InventoryGUI {
     }
 
     public void open(final Player player) {
+        if (!this.initialized) {
+            this.init();
+            this.initialized = true;
+        }
+
         player.openInventory(this.inventory);
         InventoryManager.openInventory(player, this);
     }

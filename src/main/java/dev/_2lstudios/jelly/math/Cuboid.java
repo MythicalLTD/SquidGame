@@ -12,13 +12,13 @@ public class Cuboid {
     }
 
     public boolean isBetween(final double xP, final double zP) {
-        double x1 = this.firstPoint.getX();
-        double z1 = this.firstPoint.getZ();
+        double minX = Math.min(this.firstPoint.getX(), this.secondPoint.getX());
+        double maxX = Math.max(this.firstPoint.getX(), this.secondPoint.getX());
 
-        double x2 = this.secondPoint.getX();
-        double z2 = this.secondPoint.getZ();
+        double minZ = Math.min(this.firstPoint.getZ(), this.secondPoint.getZ());
+        double maxZ = Math.max(this.firstPoint.getZ(), this.secondPoint.getZ());
 
-        return ((x1 < xP && xP < x2) || (x1 > xP && xP > x2)) && ((z1 < zP && zP < z2) || (z1 > zP && zP > z2));
+        return minX <= xP && xP <= maxX && minZ <= zP && zP <= maxZ;
     }
 
     public boolean isBetween(final Location target) {

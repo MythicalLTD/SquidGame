@@ -1,24 +1,59 @@
 game-settings:
+  proxy-mode:
+    enabled: true
+    auto-join: true
+    silent-arena-messages: true
+    lock-weather: true
+    kick-on-finish: true
+    finish-kick-delay: 8
   allow-victory-before-completing-game: false
   give-blindness-in-game-3: true
   per-arena-chat: true
   send-player-to-lobby-on-join: true
   spawn-fireworks-on-win: true
-  min-players: 2
-  max-players: 12
+  disable-fire-spread: true
+  disable-ice-snow-melt: true
+  disable-advancement-announcements: true
+  min-players: 10
+  force-start-min-players: 2
+  max-players: 350
   starting-time: 30
   finishing-time: 5
+  tug-of-war-win-distance: 20
+  tug-of-war-pull-cooldown-ms: 150
+  tug-of-war-pull-power: 3
+  tug-of-war-sneak-pull-power: 5
+  tug-of-war-sudden-death-time: 15
+  mingle-rounds: 5
+  mingle-round-time: 30
+  mingle-vote-enabled: true
+  mingle-skip-vote-percent: 50
+  mingle-min-group-size: 3
+  mingle-max-group-size: 10
+  mingle-quick-room-radius: 3
+  mingle-quick-room-height: 4
+  hide-and-seek-hide-time: 5
+  jump-rope-min-sweep-delay: 2
+  jump-rope-max-sweep-delay: 5
+  jump-rope-warning-time: 3
+  sky-squid-round-time: 900
+  sky-squid-final-round-time: 600
   game-time:
     "1": 60
     "3": 60
-    "6": 60
-    "7": 600
+    "4": 600
+    "5": 120
+    "6": 300
+    "8": 180
+    "10": 1800
+    "11": 0
+    "12": 180
+    "13": 0
   rewards:
-    - "say {winner} is the winner!"
-    - "eco give {winner} 10"
+  - ""
   sounds:
     player-loss-game: CAT_HIT
-    player-pass-game: LEVELUP
+    player-pass-game: LEVEL_UP
     player-death: EXPLODE
     arena-starting: CLICK
     arena-countdown: NOTE_PLING

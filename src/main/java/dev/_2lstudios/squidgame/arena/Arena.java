@@ -5,8 +5,12 @@ import java.util.List;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
@@ -14,10 +18,17 @@ import dev._2lstudios.jelly.config.Configuration;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.games.ArenaGameBase;
 import dev._2lstudios.squidgame.arena.games.G1RedGreenLightGame;
+import dev._2lstudios.squidgame.arena.games.G10HideAndSeekGame;
+import dev._2lstudios.squidgame.arena.games.G11JumpRopeGame;
+import dev._2lstudios.squidgame.arena.games.G12FinalDinnerGame;
+import dev._2lstudios.squidgame.arena.games.G12SkySquidGame;
 import dev._2lstudios.squidgame.arena.games.G3BattleGame;
+import dev._2lstudios.squidgame.arena.games.G4MarblesGame;
+import dev._2lstudios.squidgame.arena.games.G5TugOfWarGame;
 import dev._2lstudios.squidgame.arena.games.G6GlassesGame;
-import dev._2lstudios.squidgame.arena.games.G7SquidGame;
+import dev._2lstudios.squidgame.arena.games.G8MingleGame;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class Arena {
     private final List<SquidPlayer> players;
@@ -36,6 +47,7 @@ public class Arena {
     private ArenaGameBase currentGame;
     private int internalTime;
     private boolean allowPvP;
+    private boolean forceStarted;
 
     public Arena(final World world, final String name, final Configuration arenaConfig) {
         this.players = new ArrayList<>();
@@ -60,6 +72,7 @@ public class Arena {
         this.currentGame = null;
         this.internalTime = -1;
         this.allowPvP = false;
+        this.forceStarted = false;
 
         this.leaved = null;
         this.joined = null;
@@ -71,17 +84,35 @@ public class Arena {
 
         final int game1Time = mainConfig.getInt("game-settings.game-time.1", 60);
         final int game3Time = mainConfig.getInt("game-settings.game-time.3", 60);
+        final int game4Time = mainConfig.getInt("game-settings.game-time.4", 600);
+        final int game5Time = mainConfig.getInt("game-settings.game-time.5", 120);
         final int game6Time = mainConfig.getInt("game-settings.game-time.6", 60);
-        final int game7Time = mainConfig.getInt("game-settings.game-time.7", 60);
+        final int game8Time = mainConfig.getInt("game-settings.game-time.8", 180);
+        final int game10Time = mainConfig.getInt("game-settings.game-time.10", 1800);
+        final int game11Time = mainConfig.getInt("game-settings.game-time.11", 1200);
+        final int game12Time = mainConfig.getInt("game-settings.game-time.12", 180);
+        final int game13Time = mainConfig.getInt("game-settings.game-time.13", 900);
 
         if (game1Time > 0)
             this.games.add(new G1RedGreenLightGame(this, game1Time));
         if (game3Time > 0)
             this.games.add(new G3BattleGame(this, game3Time));
+        if (game4Time > 0)
+            this.games.add(new G4MarblesGame(this, game4Time));
+        if (game5Time > 0)
+            this.games.add(new G5TugOfWarGame(this, game5Time));
         if (game6Time > 0)
             this.games.add(new G6GlassesGame(this, game6Time));
-        if (game7Time > 0)
-            this.games.add(new G7SquidGame(this, game7Time));
+        if (game8Time > 0)
+            this.games.add(new G8MingleGame(this, game8Time));
+        if (game10Time > 0)
+            this.games.add(new G10HideAndSeekGame(this, game10Time));
+        if (game11Time > 0)
+            this.games.add(new G11JumpRopeGame(this, game11Time));
+        if (game13Time > 0)
+            this.games.add(new G12SkySquidGame(this, game13Time));
+        if (game12Time > 0)
+            this.games.add(new G12FinalDinnerGame(this, game12Time));
     }
 
     public Configuration getMainConfig() {
@@ -128,12 +159,20 @@ public class Arena {
         return this.mainConfig.getInt("game-settings.min-players");
     }
 
+    public int getForceStartMinPlayers() {
+        return this.mainConfig.getInt("game-settings.force-start-min-players", 2);
+    }
+
     public int getMaxPlayers() {
         return this.mainConfig.getInt("game-settings.max-players");
     }
 
     public Configuration getConfig() {
         return this.arenaConfig;
+    }
+
+    public boolean isLobbyConfigured() {
+        return this.arenaConfig.contains("arena.prelobby.x") && this.arenaConfig.contains("arena.waiting_room.x");
     }
 
     public Location getSpawnPosition() {
@@ -170,9 +209,9 @@ public class Arena {
         if (!this.players.contains(player) && !this.spectators.contains(player)) {
             this.joined = player.getBukkitPlayer().getName();
             this.players.add(player);
+            this.preparePlayerForArena(player);
+            this.giveStartItem(player.getBukkitPlayer());
             player.getBukkitPlayer().teleport(this.getSpawnPosition());
-            player.getBukkitPlayer().setFoodLevel(20);
-            player.getBukkitPlayer().setHealth(20);
             player.setArena(this);
             this.handler.handlePlayerJoin(player);
         }
@@ -180,8 +219,24 @@ public class Arena {
         return this;
     }
 
-    public void forceStart() {
+    public boolean forceStart() {
+        if (!this.canForceStart()) {
+            return false;
+        }
+
+        this.forceStarted = true;
+        this.removeStartItems();
         this.handler.handleArenaStart();
+        return true;
+    }
+
+    public boolean canForceStart() {
+        return (this.state == ArenaState.WAITING || this.state == ArenaState.STARTING)
+                && this.players.size() >= this.getForceStartMinPlayers();
+    }
+
+    public boolean isForceStarted() {
+        return this.forceStarted;
     }
 
     public void killAllPlayers() {
@@ -210,13 +265,7 @@ public class Arena {
         }
 
         else if (this.calculateWinner() != null) {
-            final boolean allowVictory = this.mainConfig
-                    .getBoolean("game-settings.allow-victory-before-completing-game", false);
-            final boolean isLastGame = this.currentGame != null && this.currentGame instanceof G7SquidGame;
-
-            if (isLastGame || allowVictory) {
-                this.finishArena(ArenaFinishReason.ONE_PLAYER_IN_ARENA);
-            }
+            this.finishArena(ArenaFinishReason.ONE_PLAYER_IN_ARENA);
         }
     }
 
@@ -237,7 +286,98 @@ public class Arena {
         return this;
     }
 
+    public boolean revivePlayer(final SquidPlayer player) {
+        if (this.state == ArenaState.FINISHING_ARENA || !this.spectators.contains(player)) {
+            return false;
+        }
+
+        final Player bukkitPlayer = player.getBukkitPlayer();
+
+        this.spectators.remove(player);
+        this.players.add(player);
+
+        if (bukkitPlayer.isDead()) {
+            bukkitPlayer.spigot().respawn();
+        }
+
+        player.setSpectator(false);
+        player.setArena(this);
+        this.preparePlayerForArena(player);
+        player.teleport(this.getSpawnPosition());
+        player.sendScoreboard(this.getState().toString().toLowerCase());
+
+        return true;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void preparePlayerForArena(final SquidPlayer player) {
+        final Player bukkitPlayer = player.getBukkitPlayer();
+
+        bukkitPlayer.setGameMode(GameMode.SURVIVAL);
+        bukkitPlayer.setAllowFlight(false);
+        bukkitPlayer.setFlying(false);
+        bukkitPlayer.setFoodLevel(20);
+        bukkitPlayer.setSaturation(20.0F);
+        bukkitPlayer.setFireTicks(0);
+        bukkitPlayer.setFallDistance(0.0F);
+        bukkitPlayer.setLevel(0);
+        bukkitPlayer.setExp(0.0F);
+        bukkitPlayer.getInventory().clear();
+        bukkitPlayer.getInventory().setArmorContents(new ItemStack[4]);
+
+        for (final PotionEffect effect : bukkitPlayer.getActivePotionEffects()) {
+            bukkitPlayer.removePotionEffect(effect.getType());
+        }
+
+        if (!bukkitPlayer.isDead()) {
+            bukkitPlayer.setHealth(bukkitPlayer.getMaxHealth());
+        }
+
+        bukkitPlayer.updateInventory();
+    }
+
+    public boolean isStartItem(final ItemStack item) {
+        if (item == null || item.getType() != Material.NETHER_STAR || !item.hasItemMeta()
+                || !item.getItemMeta().hasDisplayName()) {
+            return false;
+        }
+
+        return item.getItemMeta().getDisplayName()
+                .equals(MessageUtils.format(SquidGame.getInstance(), "items.start-game"));
+    }
+
+    public void removeStartItems() {
+        for (final SquidPlayer player : this.getAllPlayers()) {
+            this.removeStartItem(player.getBukkitPlayer());
+        }
+    }
+
+    private void giveStartItem(final Player player) {
+        if (!player.hasPermission("squidgame.start")) {
+            return;
+        }
+
+        final ItemStack item = new ItemStack(Material.NETHER_STAR);
+        final ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(MessageUtils.format(SquidGame.getInstance(), "items.start-game"));
+        item.setItemMeta(meta);
+        player.getInventory().addItem(item);
+        player.updateInventory();
+    }
+
+    private void removeStartItem(final Player player) {
+        for (final ItemStack item : player.getInventory().getContents()) {
+            if (this.isStartItem(item)) {
+                player.getInventory().remove(item);
+            }
+        }
+
+        player.updateInventory();
+    }
+
     public void removePlayer(final SquidPlayer player) {
+        this.removeStartItem(player.getBukkitPlayer());
+
         if (this.players.contains(player)) {
             this.leaved = player.getBukkitPlayer().getName();
             this.players.remove(player);
@@ -284,6 +424,14 @@ public class Arena {
 
     public ArenaGameBase getCurrentGame() {
         return this.currentGame;
+    }
+
+    public boolean hasNextGame() {
+        return !this.games.isEmpty();
+    }
+
+    public ArenaGameBase getNextGame() {
+        return this.games.isEmpty() ? null : this.games.get(0);
     }
 
     public String getName() {
@@ -338,28 +486,64 @@ public class Arena {
     }
 
     public void doArenaTick() {
-        if (this.internalTime >= 0) {
+        if (this.internalTime > 0) {
             this.internalTime--;
-            this.handler.handleArenaTick();
         }
+
+        this.handler.handleArenaTick();
+        this.broadcastScoreboard(this.state.toString().toLowerCase());
     }
 
     public void nextGame() {
-        if (this.calculateWinner() != null) {
-            this.finishArena(ArenaFinishReason.ONE_PLAYER_IN_ARENA);
-            return;
-        } else if (this.currentGame != null) {
+        final boolean stoppedPreviousGame = this.currentGame != null;
+
+        if (this.currentGame != null) {
+            this.setPvPAllowed(false);
             this.currentGame.onStop();
+            this.currentGame = null;
         }
 
-        final ArenaGameBase nextGame = this.games.get(0);
-        this.currentGame = nextGame;
-        this.games.remove(nextGame);
+        if (stoppedPreviousGame && this.calculateWinner() != null) {
+            this.finishArena(ArenaFinishReason.ONE_PLAYER_IN_ARENA);
+            return;
+        }
 
-        this.setState(ArenaState.INTERMISSION);
-        this.teleportAllPlayers(this.getSpawnPosition());
+        this.setPvPAllowed(false);
+        final ArenaGameBase nextGame = this.getNextPlayableGame();
+
+        if (nextGame == null) {
+            if (this.calculateWinner() != null) {
+                this.finishArena(ArenaFinishReason.ONE_PLAYER_IN_ARENA);
+            } else {
+                this.finishArena(ArenaFinishReason.ALL_PLAYERS_DEATH);
+            }
+
+            return;
+        }
+
+        this.currentGame = nextGame;
 
         this.setInternalTime(5);
+        this.setState(ArenaState.INTERMISSION);
+        this.teleportAllPlayers(this.getSpawnPosition());
         this.broadcastTitle("events.intermission.title", "events.intermission.subtitle");
+    }
+
+    private ArenaGameBase getNextPlayableGame() {
+        while (!this.games.isEmpty()) {
+            final ArenaGameBase nextGame = this.games.remove(0);
+
+            if (this.players.size() >= nextGame.getMinPlayers()) {
+                return nextGame;
+            }
+
+            for (final SquidPlayer player : this.getAllPlayers()) {
+                MessageUtils.send(SquidGame.getInstance(), player.getBukkitPlayer(), "events.game-skipped-min-players",
+                        "{game}", nextGame.getName(), "{players}", String.valueOf(this.players.size()), "{min}",
+                        String.valueOf(nextGame.getMinPlayers()));
+            }
+        }
+
+        return null;
     }
 }

@@ -1,11 +1,16 @@
 package dev._2lstudios.jelly.commands;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import dev._2lstudios.jelly.JellyPlugin;
@@ -15,7 +20,7 @@ import dev._2lstudios.jelly.errors.I18nCommandException;
 import dev._2lstudios.jelly.utils.ArrayUtils;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 
-public class CommandHandler implements CommandExecutor {
+public class CommandHandler implements CommandExecutor, TabCompleter {
 
     private final Map<String, CommandListener> commands;
     private final JellyPlugin plugin;
@@ -30,7 +35,41 @@ public class CommandHandler implements CommandExecutor {
             Command command = listener.getClass().getAnnotation(Command.class);
             this.commands.put(command.name(), listener);
             this.plugin.getCommand(command.name()).setExecutor(this);
+            this.plugin.getCommand(command.name()).setTabCompleter(this);
         }
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, org.bukkit.command.Command cmdInfo, String alias,
+            String[] args) {
+        CommandListener listener = this.commands.get(cmdInfo.getName().toLowerCase());
+
+        if (listener == null) {
+            return Collections.emptyList();
+        }
+
+        int consumedArguments = 0;
+
+        while (consumedArguments < args.length - 1) {
+            final CommandListener subCommand = listener.getSubcommand(args[consumedArguments]);
+
+            if (subCommand == null) {
+                break;
+            }
+
+            listener = subCommand;
+            consumedArguments++;
+        }
+
+        final String[] remainingArgs = Arrays.copyOfRange(args, consumedArguments, args.length);
+
+        if (!listener.getSubcommands().isEmpty() && remainingArgs.length == 1) {
+            return this.filterSubcommands(sender, listener, remainingArgs[0]);
+        }
+
+        final CommandArguments arguments = new CommandArguments(remainingArgs);
+        final CommandContext context = new CommandContext(this.plugin, sender, arguments);
+        return this.filterSuggestions(listener.tabComplete(context, remainingArgs), remainingArgs);
     }
 
     @Override
@@ -114,6 +153,50 @@ public class CommandHandler implements CommandExecutor {
         }
 
         return true;
+    }
+
+    private List<String> filterSubcommands(final CommandSender sender, final CommandListener listener,
+            final String prefix) {
+        final List<String> completions = new ArrayList<>();
+
+        for (final CommandListener subcommand : listener.getSubcommands()) {
+            final Command command = subcommand.getClass().getAnnotation(Command.class);
+
+            if (command != null && this.canUse(sender, command) && command.name().toLowerCase().startsWith(prefix.toLowerCase())) {
+                completions.add(command.name());
+            }
+        }
+
+        return completions;
+    }
+
+    private List<String> filterSuggestions(final List<String> suggestions, final String[] args) {
+        if (suggestions == null || suggestions.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        final String prefix = args.length == 0 ? "" : args[args.length - 1].toLowerCase();
+        final List<String> completions = new ArrayList<>();
+
+        for (final String suggestion : suggestions) {
+            if (suggestion.toLowerCase().startsWith(prefix)) {
+                completions.add(suggestion);
+            }
+        }
+
+        return completions;
+    }
+
+    private boolean canUse(final CommandSender sender, final Command command) {
+        if (sender instanceof Player && command.target() == CommandExecutionTarget.ONLY_CONSOLE) {
+            return false;
+        }
+
+        if (sender instanceof ConsoleCommandSender && command.target() == CommandExecutionTarget.ONLY_PLAYER) {
+            return false;
+        }
+
+        return command.permission().isEmpty() || sender.hasPermission(command.permission());
     }
 
 }

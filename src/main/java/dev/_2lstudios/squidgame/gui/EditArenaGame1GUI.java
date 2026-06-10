@@ -11,6 +11,7 @@ import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.player.PlayerManager;
 import dev._2lstudios.squidgame.player.PlayerWand;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class EditArenaGame1GUI extends InventoryGUI {
 
@@ -44,30 +45,35 @@ public class EditArenaGame1GUI extends InventoryGUI {
             return;
         } else if (id == 0) {
             this.arena.getConfig().setLocation("games.first.spawn", player.getLocation(), false);
-            player.sendMessage("§eFirst game spawn§a set in your current location.");
+            MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}",
+                    "Red Light, Green Light spawn");
         } else {
             String key = "games.first";
+            String name = "Red Light, Green Light";
 
             switch (id) {
             case 1:
                 key += ".barrier";
+                name += " barrier";
                 break;
             case 2:
                 key += ".killzone";
+                name += " kill zone";
                 break;
             case 3:
                 key += ".goal";
+                name += " goal";
                 break;
             }
 
             if (wand == null) {
-                player.sendMessage("§cYou don't have an region wand, use /squid wand to get it.");
+                MessageUtils.send(SquidGame.getInstance(), player, "setup.no-wand");
             } else if (!wand.isComplete()) {
-                player.sendMessage("§cYou need to set area with your region wand first.");
+                MessageUtils.send(SquidGame.getInstance(), player, "setup.wand-incomplete");
             } else {
                 this.arena.getConfig().setCuboid(key, wand.getCuboid());
-                player.sendMessage("§eFirst game " + key + "§a set with your location wand §7("
-                        + wand.getFirstPoint().toString() + ") (" + wand.getSecondPoint().toString() + ")");
+                MessageUtils.send(SquidGame.getInstance(), player, "setup.region-set", "{name}", name, "{first}",
+                        wand.getFirstPoint().toString(), "{second}", wand.getSecondPoint().toString());
             }
         }
 

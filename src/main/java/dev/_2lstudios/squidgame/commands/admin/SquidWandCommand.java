@@ -15,6 +15,8 @@ import dev._2lstudios.squidgame.errors.ArenaMisconfiguredException;
 import dev._2lstudios.squidgame.errors.NoAvailableArenaException;
 import dev._2lstudios.squidgame.player.PlayerWand;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.SquidGame;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 @Command(name = "wand", usage = "/squid wand", description = "Give you region wand", permission = "squidgame.admin.wand", target = CommandExecutionTarget.ONLY_PLAYER)
 public class SquidWandCommand extends CommandListener {
@@ -30,7 +32,7 @@ public class SquidWandCommand extends CommandListener {
         lore.add("§7");
         meta.setLore(lore);
 
-        meta.setDisplayName("§dRegion wand §7(Left/Right click)");
+        meta.setDisplayName(MessageUtils.format(SquidGame.getInstance(), "items.region-wand"));
         item.setItemMeta(meta);
 
         context.getPlayer().getInventory().clear();

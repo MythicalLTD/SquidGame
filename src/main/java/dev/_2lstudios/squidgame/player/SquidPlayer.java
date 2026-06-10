@@ -59,6 +59,10 @@ public class SquidPlayer extends PluginPlayer {
     }
 
     public void teleportToLobby() {
+        if (this.plugin.getMainConfig().getString("lobby.world", "").isEmpty()) {
+            return;
+        }
+
         this.teleport(this.plugin.getMainConfig().getLocation("lobby"));
     }
 

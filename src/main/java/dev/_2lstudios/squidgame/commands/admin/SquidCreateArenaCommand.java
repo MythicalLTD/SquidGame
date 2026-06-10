@@ -20,6 +20,11 @@ public class SquidCreateArenaCommand extends CommandListener {
         final SquidPlayer player = (SquidPlayer) context.getPluginPlayer();
         final String arenaName = context.getArguments().getString(0);
         plugin.getArenaManager().createArena(arenaName, player.getBukkitPlayer().getWorld());
+        plugin.getArenaManager().getArena(arenaName).getConfig().setLocation("arena.prelobby",
+                player.getBukkitPlayer().getLocation(), false);
+        plugin.getArenaManager().getArena(arenaName).getConfig().setLocation("arena.waiting_room",
+                player.getBukkitPlayer().getLocation(), false);
+        plugin.getArenaManager().getArena(arenaName).getConfig().save();
         player.sendMessage("setup.arena-created");
     }
 }

@@ -37,6 +37,10 @@ public class JellyPlugin extends JavaPlugin {
         return this.configManager.getConfig(name);
     }
 
+    public void reloadPluginConfigs() {
+        this.configManager.reloadConfigs();
+    }
+
     public IPluginPlayerManager getPluginPlayerManager() {
         return this.pluginPlayerManager;
     }

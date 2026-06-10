@@ -4,7 +4,9 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import dev._2lstudios.jelly.gui.InventoryGUI;
+import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class EditArenaGUI extends InventoryGUI {
 
@@ -17,20 +19,33 @@ public class EditArenaGUI extends InventoryGUI {
 
     @Override
     public void init() {
+        final SquidGame plugin = SquidGame.getInstance();
+
         this.addItem(1,
-                this.createItem("§eFirst game", Material.ENDER_PEARL, "§r\n§aGreen Light§7, §cRed Light §7game.\n§r"),
+                this.createItem(MessageUtils.format(plugin, "games.first.name"), Material.ENDER_PEARL,
+                        "§r\n§aGreen Light§7, §cRed Light §7game.\n§r"),
                 2, 2);
 
-        this.addItem(2, this.createItem("§cComing soon", Material.COAL), 3, 2);
-        this.addItem(3, this.createItem("§eThird Game", Material.DIAMOND_SWORD,
-                "§r\n§7This game does not require configuration.\n§7It uses the values from the §bintermission lobby§7.\n§r"),
-                4, 2);
-        this.addItem(4, this.createItem("§cComing soon", Material.COAL), 5, 2);
-        this.addItem(5, this.createItem("§cComing soon", Material.COAL), 6, 2);
+        this.addItem(3, this.createItem(MessageUtils.format(plugin, "games.third.name"), Material.DIAMOND_SWORD,
+                "§r\n§cBattle §7spawn setup.\n§r"),
+                3, 2);
+        this.addItem(4, this.createItem(MessageUtils.format(plugin, "games.fourth.name"), Material.CLAY_BALL,
+                "§r\n§bMarbles §7game.\n§r"), 4, 2);
+        this.addItem(5, this.createItem(MessageUtils.format(plugin, "games.fifth.name"), Material.STRING,
+                "§r\n§eTug of War §7game.\n§r"), 5, 2);
 
-        this.addItem(6, this.createItem("§eSixth game", Material.GLASS, "§r\n§bGlass §fGame§7.\n§r"), 7, 2);
-        this.addItem(7,
-                this.createItem("§eSeventh game", Material.STICK, "§r\n§dSquid§fGame§7, is the Final game.\n§r"), 8, 2);
+        this.addItem(6, this.createItem(MessageUtils.format(plugin, "games.sixth.name"), Material.GLASS,
+                "§r\n§bGlass §fGame§7.\n§r"), 6, 2);
+        this.addItem(8, this.createItem(MessageUtils.format(plugin, "games.mingle.name"), Material.EMERALD,
+                "§r\n§dMingle §7game.\n§r"), 7, 2);
+        this.addItem(10, this.createItem(MessageUtils.format(plugin, "games.hide-and-seek.name"), Material.IRON_SWORD,
+                "§r\n§9Hide and Seek §7game.\n§r"), 3, 3);
+        this.addItem(11, this.createItem(MessageUtils.format(plugin, "games.jump-rope.name"), Material.IRON_BLOCK,
+                "§r\n§eJump Rope §7game.\n§r"), 4, 3);
+        this.addItem(12, this.createItem(MessageUtils.format(plugin, "games.final-dinner.name"), Material.CAKE,
+                "§r\n§6Final Dinner §7interlude.\n§r"), 5, 3);
+        this.addItem(13, this.createItem(MessageUtils.format(plugin, "games.sky-squid.name"), Material.GOLD_BLOCK,
+                "§r\n§6Sky Squid Game §7final.\n§r"), 6, 3);
         this.addItem(0,
                 this.createItem("§bIntermission", Material.COMPASS, "§r\n§7Where players spawn after each game.\n§r"),
                 4, 4);
@@ -46,11 +61,32 @@ public class EditArenaGUI extends InventoryGUI {
         case 1:
             new EditArenaGame1GUI(this.arena, this).open(player);
             break;
+        case 3:
+            new EditArenaGame3GUI(this.arena, this).open(player);
+            break;
+        case 4:
+            new EditArenaGame4GUI(this.arena, this).open(player);
+            break;
+        case 5:
+            new EditArenaGame5GUI(this.arena, this).open(player);
+            break;
         case 6:
             new EditArenaGame6GUI(this.arena, this).open(player);
             break;
-        case 7:
-            new EditArenaGame7GUI(this.arena, this).open(player);
+        case 8:
+            new EditArenaMingleGUI(this.arena, this).open(player);
+            break;
+        case 10:
+            new EditArenaHideAndSeekGUI(this.arena, this).open(player);
+            break;
+        case 11:
+            new EditArenaJumpRopeGUI(this.arena, this).open(player);
+            break;
+        case 12:
+            new EditArenaFinalDinnerGUI(this.arena, this).open(player);
+            break;
+        case 13:
+            new EditArenaSkySquidGUI(this.arena, this).open(player);
             break;
         default:
             this.close(player);

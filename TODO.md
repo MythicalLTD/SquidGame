@@ -18,9 +18,12 @@ Minecraft Minigame inspired by the famous and trending Netflix series "Squid Gam
 
 - [x] Intermission  
 - [x] First Game  
-- [ ] Second Game  
 - [x] Third Game  
-- [ ] Fourth Game  
-- [ ] Fifth Game  
+- [x] Fourth Game  
+- [x] Fifth Game  
 - [x] Sixth Game  
-- [x] Seventh Game  
+- [x] Mingle Game  
+- [x] Hide and Seek Game  
+- [x] Jump Rope Game  
+- [x] Final Dinner Interlude  
+- [x] Sky Squid Game  

@@ -20,7 +20,8 @@ public class G3BattleGame extends ArenaGameBase {
     @Override
     public Location getSpawnPosition() {
         final Configuration config = this.getArena().getConfig();
-        final Location location = config.getLocation("arena.waiting_room", false);
+        final Location location = config.contains("games.third.spawn.x") ? config.getLocation("games.third.spawn", false)
+                : config.getLocation("arena.waiting_room", false);
         location.setWorld(this.getArena().getWorld());
         return location;
     }
@@ -33,6 +34,11 @@ public class G3BattleGame extends ArenaGameBase {
             this.getArena()
                     .broadcastPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, this.durationTime * 20, 1));
         }
+    }
+
+    @Override
+    public int getMinPlayers() {
+        return 2;
     }
 
     @Override

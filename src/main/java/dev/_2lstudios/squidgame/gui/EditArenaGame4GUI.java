@@ -6,13 +6,15 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
 import dev._2lstudios.jelly.gui.InventoryGUI;
+import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
+import dev._2lstudios.squidgame.utils.MessageUtils;
 
-public class EditArenaGame7GUI extends InventoryGUI {
+public class EditArenaGame4GUI extends InventoryGUI {
 
     private final Arena arena;
 
-    public EditArenaGame7GUI(final Arena arena, final InventoryGUI prevGui) {
+    public EditArenaGame4GUI(final Arena arena, final InventoryGUI prevGui) {
         super("§d§lArena §f" + arena.getName(), 45, prevGui);
         this.arena = arena;
     }
@@ -31,8 +33,8 @@ public class EditArenaGame7GUI extends InventoryGUI {
             this.back(player);
             return;
         } else if (id == 0) {
-            this.arena.getConfig().setLocation("games.seventh.spawn", player.getLocation(), false);
-            player.sendMessage("§eSeventh game spawn §aset in your current location.");
+            this.arena.getConfig().setLocation("games.fourth.spawn", player.getLocation(), false);
+            MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}", "Marbles spawn");
         }
 
         try {
