@@ -11,7 +11,7 @@ import dev._2lstudios.squidgame.errors.ArenaMisconfiguredException;
 import dev._2lstudios.squidgame.errors.NoAvailableArenaException;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 
-@Command(name = "hideseekswap", usage = "/squid hideseekswap <token>", description = "Accept a Hide and Seek team swap", permission = "squidgame.play", target = CommandExecutionTarget.ONLY_PLAYER)
+@Command(name = "hideseekswap", usage = "/squid hideseekswap <token>", description = "Accept a Hide and Seek team swap", target = CommandExecutionTarget.ONLY_PLAYER)
 public class SquidHideAndSeekSwapCommand extends CommandListener {
     @Override
     public void handle(final CommandContext context) throws NoAvailableArenaException, ArenaMisconfiguredException {
