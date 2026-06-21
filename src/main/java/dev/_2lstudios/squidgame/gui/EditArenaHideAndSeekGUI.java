@@ -8,8 +8,7 @@ import org.bukkit.entity.Player;
 import dev._2lstudios.jelly.gui.InventoryGUI;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
-import dev._2lstudios.squidgame.player.PlayerWand;
-import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.CompatibilityUtils;
 import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class EditArenaHideAndSeekGUI extends InventoryGUI {
@@ -23,12 +22,20 @@ public class EditArenaHideAndSeekGUI extends InventoryGUI {
 
     @Override
     public void init() {
-        this.addItem(0, this.createItem("§eHider spawn", Material.COMPASS, "§r\n§7Set at your current location\n§r"), 3,
+        this.addItem(0, this.createItem("§9Hider spawn", Material.COMPASS, "§r\n§7Set at your current location\n§r"), 3,
                 2);
-        this.addItem(1, this.createItem("§eSeeker spawn", Material.IRON_SWORD,
+        this.addItem(1, this.createItem("§cSeeker spawn", Material.IRON_SWORD,
                 "§r\n§7Set at your current location\n§r"), 5, 2);
-        this.addItem(2, this.createItem("§eExit zone", Material.IRON_DOOR,
-                "§r\n§7Set with your location wand\n§r"), 7, 2);
+        this.addItem(2, this.createItem("§eWaiting lobby", CompatibilityUtils.material("WOODEN_DOOR", "OAK_DOOR"),
+                "§r\n§7Use Intermission GUI for waiting room\n§r"), 7, 2);
+
+        final int ironBarCount = EditArenaIronBars.getCount(this.arena, "hide-and-seek");
+        this.addItem(EditArenaIronBars.ADD_ID,
+                this.createItem("§eAdd iron bar zone", EditArenaIronBars.buttonMaterial(),
+                        EditArenaIronBars.addButtonLore(ironBarCount)),
+                2, 3);
+        this.addItem(EditArenaIronBars.CLEAR_ID,
+                this.createItem("§cClear iron bar zones", Material.TNT, EditArenaIronBars.clearButtonLore()), 8, 3);
 
         this.addItem(99, this.createItem("§cBack", Material.BARRIER), 5, 4);
     }
@@ -46,8 +53,7 @@ public class EditArenaHideAndSeekGUI extends InventoryGUI {
             this.arena.getConfig().setLocation("games.hide-and-seek.seeker-spawn", player.getLocation(), false);
             MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}",
                     "Hide and Seek seeker spawn");
-        } else if (id == 2) {
-            this.setExitZone(player);
+        } else if (EditArenaIronBars.handle(this.arena, player, "hide-and-seek", "Hide and Seek", id)) {
         }
 
         try {
@@ -57,20 +63,5 @@ public class EditArenaHideAndSeekGUI extends InventoryGUI {
         }
 
         this.close(player);
-    }
-
-    private void setExitZone(final Player player) {
-        final SquidPlayer squidPlayer = (SquidPlayer) SquidGame.getInstance().getPlayerManager().getPlayer(player);
-        final PlayerWand wand = squidPlayer.getWand();
-
-        if (wand == null) {
-            MessageUtils.send(SquidGame.getInstance(), player, "setup.no-wand");
-        } else if (!wand.isComplete()) {
-            MessageUtils.send(SquidGame.getInstance(), player, "setup.wand-incomplete");
-        } else {
-            this.arena.getConfig().setCuboid("games.hide-and-seek.exit", wand.getCuboid());
-            MessageUtils.send(SquidGame.getInstance(), player, "setup.region-set", "{name}", "Hide and Seek exit zone",
-                    "{first}", wand.getFirstPoint().toString(), "{second}", wand.getSecondPoint().toString());
-        }
     }
 }

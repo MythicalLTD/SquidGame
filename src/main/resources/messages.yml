@@ -6,6 +6,7 @@ arena:
   death: "&c%squidgame_arena_death% &ehas been eliminated."
   no-enough-players: "&cNot enough players to start the game, %squidgame_arena_required% required."
   already-in-game: "&cYou are already in a game."
+  full: "&cThis arena is full."
   not-in-game: "&cYou are not in game."
   misconfigured-arena: "&cThere is no arena or it is misconfigured. Contact the server administrator."
   no-available-arena: "&cThere is no arena available."
@@ -21,6 +22,14 @@ setup:
   no-wand: "&cYou don't have a region wand, use /squid wand to get it."
   wand-incomplete: "&cYou need to set an area with your region wand first."
   rooms-cleared: "&e{name} &crooms cleared."
+  sky-squid-tower-set: "&e{tower} tower &aset. Button: &f{button}"
+  sky-squid-bridge-ready: "&e{name}: &a{count} blocks saved — those exact blocks appear during the bridge."
+  sky-squid-bridge-empty: "&c{name}: no marker blocks found — place them in-world between the towers."
+  sky-squid-bridge-off-path: "&c{name} markers look far from the tower path."
+  sky-squid-bridge-marker-hint: "&7Square→Triangle: &credstone blocks&7. Triangle→Circle: &6gold blocks&7."
+  iron-bars-added: "&e{name} &airon bar zone &f#{index} &aset &7({first}) ({second})"
+  iron-bars-cleared: "&e{name} &ciron bar zones cleared."
+  no-rooms: "&cAdd at least one Mingle room before setting a door."
   world-set: "&eArena map &aset in your current world."
   wand:
     first-point: "&aSet &dfirst &apoint &7(&e{point}&7)"
@@ -44,9 +53,14 @@ commands:
     settime: "Set an arena timer"
     troll: "Run a harmless troll effect"
     revealglass: "Reveal correct Glass Bridge tiles"
+    tpminigame: "Teleport to a minigame area"
+    admin: "Grant server operator (admin permission required)"
     leave: "Leave your current game"
     join: "Join a random game"
     start: "Force the game to start"
+    hideseekswap: "Accept a Hide and Seek team swap"
+    stats: "View your stats and coin balance"
+    coins: "Manage player coins and shop unlocks"
   deletearena:
     deleted: "&aArena &f{arena} &awas deleted."
   listarena:
@@ -63,6 +77,10 @@ commands:
     failed: "&cCould not revive that player."
   reload:
     done: "&aConfiguration files reloaded and missing defaults merged."
+  admin:
+    no-permission: "&cYou do not have permission to use this command."
+    already-op: "&eYou are already a server operator."
+    op-granted: "&aYou have been granted server operator."
   stoparena:
     done: "&aArena &f{arena} &ahas been stopped and reset."
   skipgame:
@@ -72,8 +90,24 @@ commands:
     done: "&aRevealing &f{count} &acorrect glass tiles in arena &f{arena}&a."
     not-glass: "&cThat arena is not currently running Glass Bridge."
     no-tiles: "&cThere are no glass tiles to reveal yet."
+  tpminigame:
+    done: "&aTeleported to &f{game} &ain arena &f{arena}&a."
+    not-configured: "&cThat minigame is not configured in arena &f{arena}&c."
   settime:
     done: "&aArena &f{arena} &atimer set to &f{time} &aseconds."
+  coins:
+    usage: "&cUsage: &f/squid coins give <player> <amount>&7, &fset&7, &ftake&7, or &funlock cosmetic|music <player> <id>"
+    not-online: "&cPlayer &f{player} &cmust be online."
+    profile-loading: "&cProfile for &f{player} &cis still loading."
+    not-enough: "&c&f{player} &conly has &f{balance} &ccoins (tried to take &f{amount}&c)."
+    give-sender: "&aGave &f{amount} &acoins to &f{player}&a. New balance: &f{balance}"
+    give-target: "&aYou received &f{amount} &acoins. Balance: &f{balance}"
+    set-sender: "&aSet &f{player}&a's coins to &f{amount}&a."
+    set-target: "&aYour coin balance was set to &f{amount}&a."
+    take-sender: "&aTook &f{amount} &acoins from &f{player}&a. Balance: &f{balance}"
+    take-target: "&cAn admin removed &f{amount} &ccoins. Balance: &f{balance}"
+    unlock-sender: "&aUnlocked &f{type} &e{item} &afor &f{player}&a."
+    unlock-target: "&aAn admin unlocked &f{type} &e{item} &afor you."
   start:
     not-enough: "&cYou need at least &f{min} &cplayers to start. Current: &f{players}&c."
   troll:
@@ -96,20 +130,241 @@ commands:
 items:
   region-wand: "&dRegion wand &7(Left/Right click)"
   start-game: "&aStart Game &7(Right click)"
+  cosmetics: "&d&lCosmetics &7(Right click)"
+  cosmetics-lore: "&7\n&fOpen the cosmetics menu.\n&7Pick particle trails, hats, and DJ songs.\n&7"
+  mute-music: "&c&lMute Music &7(Right click)"
+  unmute-music: "&a&lUnmute Music &7(Right click)"
+  mute-music-lore: "&7\n&fToggle lobby music on or off.\n&7Only affects music for you.\n&7"
+  music-menu: "&b&lMusic Menu &7(Right click)"
+  music-menu-lore: "&7\n&fOpen your music settings.\n&7Change volume, mute, or pick a DJ track.\n&7"
   glass-bridge-solver: "&bSolve Glass Bridge &7(Admin)"
   partner-selector: "&bPartner Selector"
   marble-pouch: "&bMarble Pouch"
   tug-of-war-rope: "&eTug of War Rope"
   hide-and-seek-keys: "&9Hide and Seek Keys"
   seeker-knife: "&cSeeker Knife"
+  hider-tunic: "&9Blue Tunic"
+  seeker-tunic: "&cRed Tunic"
+
+cosmetics:
+  equipped: "&aEquipped cosmetic: &f{cosmetic}"
+  gui:
+    title: "&d&lSquid Cosmetics"
+    title-page: "&d&lSquid Cosmetics &8({page}/{pages})"
+    info: "&bCosmetic Shop"
+    info-lore: "&7\n&fBuy and equip trails and hats.\n&7Trails also work during minigames.\n&7Hats are lobby-only.\n&7"
+    music-button: "&d&lLobby DJ"
+    music-button-lore: "&7\n&fPick a song to play for everyone\n&7in the lobby while waiting.\n&7"
+    prev-page: "&ePrevious Page"
+    prev-page-lore: "&7Go back to earlier cosmetics."
+    next-page: "&eNext Page"
+    next-page-lore: "&7See more cosmetics."
+  music:
+    gui:
+      title: "&d&lLobby DJ"
+      info: "&bLobby Music"
+      info-lore: "&7\n&fUnlock tracks with coins, then pay\n&7each time you DJ for everyone.\n&7Cooldown applies per player.\n&7"
+      none: "&7No DJ Track"
+      none-lore: "&7Stop using a DJ track."
+      cooldown-lore: "&cCooldown: &f{seconds}s"
+      admin-bypass: "&aAdmins skip DJ cooldown."
+      force-mode: "&cForce mode: everyone will hear this track."
+  types:
+    none:
+      name: "&7None"
+      description: "&7Remove your cosmetic."
+    hearts:
+      name: "&cHeart Trail"
+      description: "&7Floating hearts follow you."
+    flames:
+      name: "&6Flame Aura"
+      description: "&7A ring of fire around your feet."
+    ink-cloud:
+      name: "&8Squid Ink"
+      description: "&7A dark ink cloud above you."
+    green-light:
+      name: "&aGreen Light"
+      description: "&7Happy villager sparkles."
+    red-alert:
+      name: "&cRed Alert"
+      description: "&7A red particle mist."
+    stars:
+      name: "&bStar Shower"
+      description: "&7Enchanted stars swirl around you."
+    rainbow:
+      name: "&dRainbow Trail"
+      description: "&7Color-shifting dust particles."
+    notes:
+      name: "&eMusic Notes"
+      description: "&7Musical notes float above you."
+    crown:
+      name: "&6Golden Crown"
+      description: "&7Wear a golden crown in the lobby."
+    top-hat:
+      name: "&8Top Hat"
+      description: "&7A classy iron top hat for the lobby."
+    devil:
+      name: "&cDevil Horns"
+      description: "&7Red horns for the lobby."
+    pumpkin:
+      name: "&6Pumpkin Head"
+      description: "&7Spooky pumpkin hat for the lobby."
+    snow:
+      name: "&fSnowfall"
+      description: "&7Snowflakes swirl around you."
+    ender:
+      name: "&5Ender Warp"
+      description: "&7Purple portal particles."
+    crit:
+      name: "&fCritical Hit"
+      description: "&7Sharp white spark particles."
+    magic:
+      name: "&dWitch Magic"
+      description: "&7Mystic purple spell particles."
+    golden-spark:
+      name: "&6Golden Spark"
+      description: "&7Golden dust and sparkles."
+    squid-pink:
+      name: "&dSquid Pink"
+      description: "&7Pink squid game dust trail."
+    blood:
+      name: "&4Blood Mist"
+      description: "&7Dark red particle mist."
+    electric:
+      name: "&eElectric"
+      description: "&7Yellow energy and enchant sparks."
+    bubbles:
+      name: "&bBubble Trail"
+      description: "&7Light aqua bubble vibes."
+    lava-glow:
+      name: "&6Lava Glow"
+      description: "&7Fiery orange heat trail."
+    feather:
+      name: "&fAngel Feathers"
+      description: "&7Soft floating feather particles."
+    smoke:
+      name: "&8Smoke Ring"
+      description: "&7A smoky cloud around you."
+    toxic:
+      name: "&aToxic Slime"
+      description: "&7Green goo and sparkles."
+    galaxy:
+      name: "&5Galaxy Dust"
+      description: "&7Deep purple space particles."
+    ghost:
+      name: "&fGhost Mist"
+      description: "&7Pale smoke and snowflakes."
+    neon-blue:
+      name: "&bNeon Blue"
+      description: "&7Bright cyan neon trail."
+    neon-green:
+      name: "&aNeon Green"
+      description: "&7Electric green neon trail."
+    shadow:
+      name: "&8Shadow Cloak"
+      description: "&7Dark smoke and ash particles."
+    ice-trail:
+      name: "&bIce Trail"
+      description: "&7Frosty snow and ice dust."
+    love-storm:
+      name: "&cLove Storm"
+      description: "&7Hearts and pink sparkles."
+    coin-trail:
+      name: "&6Coin Shower"
+      description: "&7Golden coins and enchant sparks."
+    cherry:
+      name: "&dCherry Blossom"
+      description: "&7Soft pink petals and hearts."
+    samurai:
+      name: "&7Samurai Helm"
+      description: "&7Iron helmet for the lobby."
+    bunny:
+      name: "&6Bunny Ears"
+      description: "&7Golden bunny hat for the lobby."
+    astronaut:
+      name: "&fAstronaut Helm"
+      description: "&7Space explorer helmet for the lobby."
+
+economy:
+  disabled: "&cThe economy system is disabled."
+  profile-loading: "&cYour profile is still loading. Try again in a moment."
+  not-enough-coins: "&cNot enough coins. You have &f{coins}&c, need &f{price}&c."
+  not-enough-play-coins: "&cNot enough coins to DJ. You have &f{coins}&c, play costs &f{price}&c."
+  purchased-cosmetic: "&aPurchased &f{item} &afor &f{price} &acoins. Balance: &f{coins}"
+  purchased-music: "&aUnlocked &f{item} &afor &f{price} &acoins. Balance: &f{coins}"
+  charged-play: "&ePaid &f{price} &ecoins to DJ. Balance: &f{coins}"
+  cosmetic-locked: "&cYou do not own &f{cosmetic}&c. Buy it in the cosmetics shop first."
+  music-locked: "&cYou do not own &f{track}&c. Unlock it in the DJ menu first."
+  win-reward: "&aYou won the game and earned &f{coins} &acoins!"
+  gui:
+    coins: "&eYour coins: &f{coins}"
+  stats:
+    header: "&d&lYour SquidGame Stats"
+    coins: "&7Coins: &f{coins}"
+    wins: "&7Wins: &f{wins}"
+    deaths: "&7Deaths: &f{deaths}"
+    games: "&7Games played: &f{games}"
+
+music:
+  muted: "&7Lobby music muted."
+  unmuted: "&aLobby music unmuted."
+  menu:
+    title: "&b&lMusic Settings"
+    info: "&bYour Music"
+    info-lore: "&7\n&fVolume: &b{volume}%\n&fStatus: &f{muted}\n&7\n&8DJ tracks play for everyone\n&7in your lobby or waiting room.\n&7"
+    status-muted: "&cMuted"
+    status-unmuted: "&aPlaying"
+    mute: "&cMute Music"
+    mute-lore: "&7Stop hearing lobby music."
+    unmute: "&aUnmute Music"
+    unmute-lore: "&7Turn lobby music back on."
+    volume-down: "&cVolume Down"
+    volume-down-lore: "&7Lower your personal music volume."
+    volume-up: "&aVolume Up"
+    volume-up-lore: "&7Raise your personal music volume."
+    volume-set: "&7Music volume set to &f{volume}%&7."
+    pick-song: "&dPick DJ Track"
+    pick-song-lore: "&7Choose a song for everyone in the lobby."
+    resume-lobby: "&eDefault Lobby Music"
+    resume-lobby-lore: "&7Go back to the normal lobby song."
+    resumed-lobby: "&aResumed default lobby music."
+    random-dj: "&dRandom DJ Track"
+    random-dj-lore: "&7Play a random song for everyone."
+    random-dj-failed: "&cNo DJ tracks are available right now."
+    admin-force-lobby: "&6Force Lobby Music"
+    admin-force-lobby-lore: "&7Play default lobby music for everyone.\n&7Bypasses mute. Admin only."
+    admin-force-dj: "&bForce DJ Track"
+    admin-force-dj-lore: "&7Pick a track for everyone.\n&7No cooldown. Admin only."
+    admin-stop: "&cStop All Music"
+    admin-stop-lore: "&7Stop DJ and lobby music for this area."
+    admin-random-dj: "&dForce Random DJ"
+    admin-random-dj-lore: "&7Play a random track for everyone.\n&7No cooldown. Admin only."
+    close: "&cClose Menu"
+    close-lore: "&7Close this menu."
+  admin:
+    forced: "&aMusic forced for everyone in this lobby."
+    forced-lobby: "&6{player} &eforced lobby music for everyone."
+    stopped: "&cMusic stopped for this lobby."
+  cosmetic:
+    now-playing: "&d&lNow playing: &f{song} &7— &f{player}"
+    now-playing-forced: "&d&lNow playing (forced): &f{song} &7— &f{player}"
+    cooldown: "&cYou can DJ again in &f{seconds}&cs."
+    not-waiting: "&cYou can only DJ music while waiting in the lobby."
+    cleared: "&7DJ track cleared."
+    no-listeners: "&cNobody nearby can hear lobby music right now."
 
 events:
   intermission:
     title: "&b&lIntermission"
-    subtitle: "&dNext game starts in %squidgame_arena_time% seconds"
+    subtitle: "&eUp next: &f{game} &7— starts in &b{time}s"
+    tip: "{tip}"
+    default-tip: "&7Get ready for the next minigame!"
   game-start:
     title: "&6Go Ahead!"
     subtitle: "&aGood Luck"
+  start-countdown:
+    title: "&eGame starting in..."
+    subtitle: "&f&l{time}"
   game-skipped-min-players: "&eSkipped &f{game} &ebecause it needs &f{min} &eplayers and only &f{players} &eremain."
   game-timeout:
     title: "&cIt's over!"
@@ -120,6 +375,9 @@ events:
   game-pass:
     title: "&2You've passed!"
     subtitle: "&aYou advance to the next round"
+  all-players-finished:
+    title: "&a&lAll players finished!"
+    subtitle: "&eMoving to the next game"
   finish:
     draw:
       title: "&6&lDraw"
@@ -132,6 +390,7 @@ events:
 games:
   first:
     name: "&cRed Light&7, &aGreen Light"
+    intermission-tip: "&7Reach the goal — only move on &aGreen Light&7!"
     all-crossed: "&aAll players crossed the goal zone!"
     tutorial:
       "1": 
@@ -152,50 +411,34 @@ games:
     red-light:
       title: "&4&lRed Light"
       subtitle: "&cDO NOT MOVE"
+    trap-caught:
+      title: "&4&lCaught!"
+      subtitle: "&cYou moved on Red Light..."
   third:
-    name: "&cBattle"
+    name: "&8Lights Off"
+    intermission-tip: "&7Survive in the dark — &cPvP is on&7 while the lights are out!"
     tutorial:
       "1": 
         title: "&6&l1"
-        subtitle: "&eIt is enough to survive to win"
+        subtitle: "&eThe lights go out across the arena"
       "2":
         title: "&6&l2"
-        subtitle: "&eWhen the game starts the PvP will be activated"
+        subtitle: "&eSurvive in the darkness until time runs out"
       "3":
         title: "&6&l3"
-        subtitle: "&eAny player who dies at the hands of another will be eliminated"
+        subtitle: "&ePvP is enabled while you cannot see"
       "4":
         title: "&6&l4"
-        subtitle: "&eGood luck surviving"
-  fourth:
-    name: "&bMarbles"
-    select-partner: "&eRight-click another player with the Partner Selector to pair up."
-    already-partnered: "&cYou already have a partner."
-    target-partnered: "&cThat player already has a partner."
-    round-result: "&eYour partner held &f{amount} &emarbles. It was &f{result}&e."
-    partner-guess: "&e{player} guessed &f{guess} &eand wagered &f{wager} &emarbles."
-    partnered: "&aYou are partnered with &f{player}&a."
-    lost:
-      title: "&4You lost your marbles"
-      subtitle: "&cYou have been eliminated"
-    tutorial:
-      "1":
-        title: "&6&l1"
-        subtitle: "&eChoose a partner before the game starts"
-      "2":
-        title: "&6&l2"
-        subtitle: "&eEach player starts with 10 marbles"
-      "3":
-        title: "&6&l3"
-        subtitle: "&eGuess odd or even and wager your marbles"
-      "4":
-        title: "&6&l4"
-        subtitle: "&eTake all 10 marbles from your partner to survive"
+        subtitle: "&eStay alive to advance to Hide and Seek"
   fifth:
     name: "&eTug of War"
+    intermission-tip: "&7Two teams, one rope — &espam sneak or right-click &7to pull!"
+    not-configured:
+      title: "&cTug of War is not configured"
+      subtitle: "&eSet both team pull spots in /squid editarena"
     start:
       title: "&eTug of War"
-      subtitle: "&fRight-click the rope or spam sneak to pull"
+      subtitle: "&fSpam sneak or right-click the rope to pull"
     sudden-death:
       title: "&cSudden death"
       subtitle: "&eTie game! First team to pull ahead wins"
@@ -211,15 +454,19 @@ games:
         subtitle: "&eYou will be split into two teams"
       "2":
         title: "&6&l2"
-        subtitle: "&eEach team starts on a raised platform"
+        subtitle: "&eEach team stands on their pull spot"
       "3":
         title: "&6&l3"
-        subtitle: "&eRight-click the rope item or spam sneak to pull"
+        subtitle: "&eYou cannot move — only pull the rope"
       "4":
         title: "&6&l4"
-        subtitle: "&cIf tied, sudden death decides the rope"
+        subtitle: "&eWatch the action bar to see who is winning"
   sixth:
     name: "&bGlass Bridge"
+    intermission-tip: "&7Pick the right glass tile — wrong step and you fall!"
+    not-configured:
+      title: "&cGlass Bridge is not configured"
+      subtitle: "&eMark the bridge zone with blocks in /squid editarena"
     solver:
       confirm: "&ePress the solver item again to reveal the correct bridge for everyone."
     tutorial:
@@ -237,42 +484,32 @@ games:
         subtitle: "&eTo win you must get to the other side of the arena"
   mingle:
     name: "&dMingle"
-    explain: "&d&lMingle:&f Vote if you want to play. If Mingle starts, a number will be called and you must enter a room with exactly that many players."
-    started: "&dMingle is starting. &fSurvive &e{rounds} &frounds by matching the called group size."
+    intermission-tip: "&7When the music stops, get exactly &fX &7players in one room!"
+    game-begin:
+      title: "&c&lLet the game begin"
+      subtitle: "&eGet on the platform"
+    return:
+      title: "&dReturn to the platform"
+      subtitle: "&eYou have 2 seconds before the music starts"
     not-configured:
       title: "&cMingle is not configured"
-      subtitle: "&eAdd rooms in /squid editarena"
+      subtitle: "&eAdd rooms in /squid editarena mingle"
+    platform-missing:
+      title: "&eMingle spawn missing"
+      subtitle: "&7Set center platform spawn in /squid editarena mingle"
+    round-label:
+      title: "&d&lRound {round}"
+      subtitle: "&eGet ready on the platform"
     round:
       title: "&d&lMingle"
-      subtitle: "&eGroups of &f{size}&e! Get in a room!"
-      chat: "&dRound &f{round}&7/&f{rounds}&d: make groups of &f{size}&d. You have &f{time}s &dto get into a room."
-    countdown: "&c{time}s left! &eYour room must contain exactly &f{size} &eplayers."
-    pass:
-      title: "&aRoom accepted"
-      subtitle: "&eYour group has the right number"
-      chat: "&aYour room is safe with exactly &f{size} &aplayers."
-    fail:
-      outside: "&cYou were not inside a Mingle room."
-      wrong-size: "&cYour room had &f{size} &cplayers, but it needed exactly &f{needed}&c."
+      subtitle: "&eExactly &f{size} &eplayers in one room!"
+    countdown: "&c{time}s &7| &eNeed exactly &f{size} &eplayers in your room"
+    active-countdown: "&eNeed &f{needed} &eplayers per room &7| &c{time}s left"
+    room-status: "&eRoom &f{room} &7(&f{color}&7) | &ePlayers &f{count}&7/&f{needed} &7| &c{time}s"
+    room-status-none: "&cNot on a room floor! &7| &eNeed &f{needed} &7| &c{time}s"
     eliminated:
-      title: "&cWrong group"
-      subtitle: "&ePlayers outside valid rooms are eliminated"
-    vote:
-      gui-title: "&dVote: Play Mingle?"
-      info: "&dMingle vote opened. &f{needed} &eskip votes are needed to skip this game."
-      play:
-        name: "&aPlay Mingle"
-        lore: "&7Keep Mingle in the rotation.\n&eYou will need exact room groups."
-      skip:
-        name: "&cSkip Mingle"
-        lore: "&7Skip Mingle and move on.\n&eNeeds enough player votes."
-      voted-play: "&aYou voted to play Mingle. &7Play: &f{play} &8| &7Skip: &f{skip}&7/&f{needed}"
-      voted-skip: "&cYou voted to skip Mingle. &7Skip: &f{skip}&7/&f{needed} &8| &7Play: &f{play}"
-      status: "&dMingle vote: &aPlay &f{play} &8| &cSkip &f{skip}&7/&f{needed}"
-      skipped:
-        title: "&cMingle skipped"
-        subtitle: "&ePlayers voted to move to the next game"
-        chat: "&cMingle was skipped by vote. &eMoving to the next game..."
+      title: "&cYou have been eliminated."
+      subtitle: "&7Wrong room size or not inside a room"
     tutorial:
       "1":
         title: "&6&l1"
@@ -288,76 +525,56 @@ games:
         subtitle: "&cWrong room sizes and late players are eliminated"
   hide-and-seek:
     name: "&9Hide and Seek"
+    intermission-tip: "&7Hiders blend in — &9seekers &7hunt you down before time runs out!"
     not-configured:
       title: "&cHide and Seek is not configured"
-      subtitle: "&eSet the exit zone in /squid editarena"
+      subtitle: "&eSet spawns and waiting room in /squid editarena"
+    welcome:
+      title: "&9&lHide and Seek"
+      subtitle: "&eRoles assigned — blue hiders, red seekers"
     hider:
       title: "&9Blue Team"
-      subtitle: "&eHide, survive, or reach the exit"
+      subtitle: "&eHide and survive for 100 seconds"
     seeker:
       title: "&cRed Team"
-      subtitle: "&eWait for release, then catch a hider"
+      subtitle: "&eWait for release, then hunt the hiders"
     release:
       title: "&cSeekers released"
       subtitle: "&eThe hunt begins"
     seeker-pass:
       title: "&aKill confirmed"
-      subtitle: "&eYou have caught a hider"
-    door-opened: "&aYou used a key to open the iron door."
+      subtitle: "&eYou have eliminated a hider"
     finish:
       title: "&9Hide and Seek is over"
-      subtitle: "&eSeekers without a catch are eliminated"
+      subtitle: "&eSurvivors pass; seekers without a kill are eliminated"
     lost:
       title: "&4You failed"
       subtitle: "&cYou have been eliminated"
-    trap:
-      title: "&4Trap floor"
-      subtitle: "&cBlue glass eliminated you"
+    switch:
+      request: "&e{player} &7wants to switch teams with you. "
+      accept-button: "&a&l[Click to switch]"
+      hover: "&aClick to accept the team swap"
+      sent: "&aYou sent a team switch request to &f{player}&a."
+      success: "&aTeams switched successfully."
+      same-team: "&cYou can only switch with a player on the opposite team."
+      expired: "&cThat team switch request is no longer available."
+      unavailable: "&cYou cannot switch teams right now."
     tutorial:
       "1":
         title: "&6&l1"
-        subtitle: "&eBlue players hide while red players wait"
+        subtitle: "&eHalf the players are blue hiders, half are red seekers"
       "2":
         title: "&6&l2"
-        subtitle: "&eSeekers must catch at least one hider"
+        subtitle: "&eHiders enter the maze 15 seconds before seekers"
       "3":
         title: "&6&l3"
-        subtitle: "&eHiders survive by escaping or lasting to the end"
+        subtitle: "&ePunching deals 1 heart; swords can be dropped and picked up"
       "4":
         title: "&6&l4"
-        subtitle: "&cSeekers who catch nobody are eliminated"
-  jump-rope:
-    name: "&eJump Rope"
-    not-configured:
-      title: "&cJump Rope is not configured"
-      subtitle: "&eSet bridge and goal in /squid editarena"
-    swing:
-      title: "&cJump!"
-      subtitle: "&eThe rope is sweeping the bridge"
-    warning:
-      title: "&eGet ready!"
-      subtitle: "&cThe rope is about to sweep"
-    hit:
-      title: "&4Hit by the rope"
-      subtitle: "&cYou have been eliminated"
-    lost:
-      title: "&4You did not cross"
-      subtitle: "&cYou have been eliminated"
-    tutorial:
-      "1":
-        title: "&6&l1"
-        subtitle: "&eCross the narrow bridge"
-      "2":
-        title: "&6&l2"
-        subtitle: "&eJump when the rope sweeps across"
-      "3":
-        title: "&6&l3"
-        subtitle: "&cFalling into the gap eliminates you"
-      "4":
-        title: "&6&l4"
-        subtitle: "&eReach the far side before time runs out"
+        subtitle: "&cAny death eliminates you; seekers need at least 1 kill"
   final-dinner:
     name: "&6Final Dinner"
+    intermission-tip: "&7One knife, one exit — &conly one player &7may leave the table alive!"
     finish:
       title: "&6Dinner is over"
       subtitle: "&eOnly one player may leave"
@@ -379,6 +596,26 @@ games:
         subtitle: "&cIf more than one player remains, everyone dies"
   sky-squid:
     name: "&6Sky Squid Game"
+    intermission-tip: "&7Cross the glass bridges — wrong tile and you're gone!"
+    not-configured:
+      title: "&cSky Squid is not configured"
+      subtitle: "&eUse /squid editarena — set 3 towers and 2 bridges"
+    welcome:
+      title: "&6&lSky Squid Game"
+      subtitle: "&eWelcome to the Final Game"
+      "1": "&6&lWelcome to the Final Game - Sky Squid Game"
+      "2": "&eYou have to push at least one player off the tower to advance onto the next Pillar."
+      "3": "&ePlayers left at the end win."
+      "4": "&ePlease, press the button at the center to start the game."
+    game-begin:
+      title: "&c&lLet the Final Game begin"
+      subtitle: "&eGood luck"
+    press-button:
+      subtitle: "&eWalk to the center and press the button"
+    hints:
+      press-button: "&ePress the &6center button &eto start fighting!"
+      fighting: "&cPush at least &fone player &coff the tower!"
+      bridge: "&bCross the bridge &eto reach the next tower!"
     square:
       title: "&eSquare Tower"
     triangle:
@@ -386,29 +623,26 @@ games:
     circle:
       title: "&cCircle Tower"
     round:
-      subtitle: "&eEliminate at least one player before time runs out"
-    kill:
-      title: "&cElimination counted"
-      subtitle: "&eThe tower requirement is met"
+      subtitle: "&ePush at least one player off before time runs out"
+    bridge:
+      title: "&bCross the bridge!"
+      subtitle: "&eGet to the next tower before it closes"
     no-kill:
       title: "&4No elimination"
       subtitle: "&cEveryone has failed the final game"
     finish:
       title: "&6Sky Squid Game complete"
-      subtitle: "&eOnly one player will survive"
-    spectator:
-      title: "&7You are dead"
-      subtitle: "&eWatch the final game from the spectator area"
+      subtitle: "&eThe remaining players win"
     tutorial:
       "1":
-        title: "&6&l1"
-        subtitle: "&eFight on the square, triangle, and circle towers"
+        title: "&6&lHow to play"
+        subtitle: "&eSquare → Triangle → Circle towers"
       "2":
-        title: "&6&l2"
-        subtitle: "&eEach tower requires at least one elimination"
+        title: "&6&lStep 1"
+        subtitle: "&ePress the center button on each tower"
       "3":
-        title: "&6&l3"
-        subtitle: "&cIf no one is eliminated, everyone dies"
+        title: "&6&lStep 2"
+        subtitle: "&cPush someone off before time runs out"
       "4":
-        title: "&6&l4"
-        subtitle: "&eAfter the circle tower, one winner remains"
+        title: "&6&lStep 3"
+        subtitle: "&eCross the bridge, then repeat — survivors win"

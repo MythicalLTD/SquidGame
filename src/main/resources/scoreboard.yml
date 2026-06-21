@@ -1,36 +1,30 @@
-# This scoreboard will only work if SwiftBoard is installed
-# https://www.spigotmc.org/resources/swiftboard-free-async-and-fast.96879/
+# SwiftBoard: https://www.spigotmc.org/resources/swiftboard-free-async-and-fast.96879/
+# PlaceholderAPI (optional): https://www.spigotmc.org/resources/placeholderapi.6245/
 #
-# Anyway, you can use any other scoreboard plugin as long as it has PlaceholderAPI support and it is also installed.
-# https://www.spigotmc.org/resources/placeholderapi.6245/
-#
-# Arena Variables:
-# %squidgame_arena_death%      Return last player death.
-# %squidgame_arena_joined%     Return last player joined.
-# %squidgame_arena_leaved%     Return last played leave.
-# %squidgame_arena_players%    Return alive players in arena.
-# %squidgame_arena_spectators% Return spectators players in arena.
-# %squidgame_arena_required%   Return required players count to start arena.
-# %squidgame_arena_maxplayers% Return max players allowed in arena.
-# %squidgame_arena_winner%     Return arena winner.
-# %squidgame_arena_time%       Return current arena event time.
-# %squidgame_arena_game%       Return current arena game name.
-# %squidgame_arena_name%       Return arena name.
-#
-# Player Variables: (Not finished yet)
-# %squidgame_player_wins%      Return player wins,
-# %squidgame_player_deaths%    Return player deaths.
-#
-# You can also use any custom PlaceholderAPI placeholder from installed expansions.
+# SquidGame placeholders:
+# %squidgame_player_name% %squidgame_player_coins% %squidgame_player_wins%
+# %squidgame_player_deaths% %squidgame_player_games% %squidgame_player_kdr%
+# %squidgame_server_online% %squidgame_arenas%
+# %squidgame_arena_players% %squidgame_arena_spectators% %squidgame_arena_required%
+# %squidgame_arena_maxplayers% %squidgame_arena_time% %squidgame_arena_game%
+# %squidgame_arena_name% %squidgame_arena_winner%
 
 lobby:
-    - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
-    - ""
-    - "&7(Coming soon)"
-    - "&eWins: &a%squidgame_player_wins%"
-    - "&eDeaths: &c%squidgame_player_deaths%"
-    - ""
-    - "&bgamster.org [v2.0]"
+  - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
+  - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
+  - ""
+  - "&6&lYour Stats"
+  - " &ePlayer: &f%squidgame_player_name%"
+  - " &eCoins: &6%squidgame_player_coins%"
+  - " &eWins: &a%squidgame_player_wins%"
+  - " &eDeaths: &c%squidgame_player_deaths%"
+  - " &eGames: &b%squidgame_player_games%"
+  - " &eK/D: &f%squidgame_player_kdr%"
+  - ""
+  - " &eOnline: &b%squidgame_server_online%"
+  - ""
+  - "&bgamster.org [v2.0]"
+
 waiting:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
@@ -38,8 +32,14 @@ waiting:
   - "&6&lGame Info"
   - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
   - " &eRequired to start: &b%squidgame_arena_required%"
+  - " &eArena: &f%squidgame_arena_name%"
+  - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &b%squidgame_player_coins%"
+  - " &eWins: &b%squidgame_player_wins%"
   - ""
   - "&bgamster.org [v2.0]"
+
 starting:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
@@ -48,55 +48,79 @@ starting:
   - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
   - " &eStarting in: &b%squidgame_arena_time%"
   - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &b%squidgame_player_coins%"
+  - " &eWins: &b%squidgame_player_wins%"
+  - ""
   - "&bgamster.org [v2.0]"
+
 intermission:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
-  - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"  
+  - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
   - ""
-  - "&6&lGame Info"
-  - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
-  - " &eGame: &b%squidgame_arena_game%"
-  - " &eNext game in: &b%squidgame_arena_time%"
+  - "&6&lUp Next"
+  - " &eGame: &f%squidgame_arena_game%"
+  - " &eStarts in: &b%squidgame_arena_time%s"
+  - " &7Alive: &b%squidgame_arena_players% &7| &8Spectators: &7%squidgame_arena_spectators%"
+  - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &6%squidgame_player_coins%"
+  - " &eWins: &a%squidgame_player_wins% &7| &c%squidgame_player_deaths% &7deaths"
   - ""
   - "&bgamster.org [v2.0]"
+
 explain_game:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
   - ""
   - "&6&lGame Info"
   - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
-  - " &eSpectators: &b%squidgame_arena_spectators%"
   - " &eGame: &b%squidgame_arena_game%"
   - " &eGame starts in: &b%squidgame_arena_time%"
   - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &6%squidgame_player_coins%"
+  - ""
   - "&bgamster.org [v2.0]"
+
 in_game:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
   - ""
   - "&6&lGame Info"
   - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
-  - " &eSpectators: &b%squidgame_arena_spectators%"
   - " &eGame: &b%squidgame_arena_game%"
   - " &eFinish in: &b%squidgame_arena_time%"
   - ""
+  - "&6&lYour Stats"
+  - " &eWins: &a%squidgame_player_wins% &7| &eK/D: &f%squidgame_player_kdr%"
+  - ""
   - "&bgamster.org [v2.0]"
+
 finishing_game:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
-  - ""  
+  - ""
   - "&6&lGame Info"
   - " &ePlayers: &b%squidgame_arena_players%&7/&b%squidgame_arena_maxplayers%"
-  - " &eSpectators: &b%squidgame_arena_spectators%"
   - " &eGame: &b%squidgame_arena_game%"
   - " &eBack to lobby in: &b%squidgame_arena_time%"
   - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &6%squidgame_player_coins%"
+  - ""
   - "&bgamster.org [v2.0]"
+
 finishing_arena:
   - "&7&kA&r &b&lSQUIDWARS &7&kA&r"
   - "      &7&7%localtime_timezone_Europe/Berlin,MMM dd, yyyy%"
   - ""
   - "&6&lGame Info"
   - " &eWinner: &b%squidgame_arena_winner%"
+  - ""
+  - "&6&lYour Stats"
+  - " &eCoins: &b%squidgame_player_coins%"
+  - " &eWins: &b%squidgame_player_wins%"
+  - " &eGames: &b%squidgame_player_games%"
   - ""
   - "&bgamster.org [v2.0]"

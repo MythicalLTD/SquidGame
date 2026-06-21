@@ -28,7 +28,7 @@ public class PlayerToggleSneakListener implements Listener {
         final Arena arena = player.getArena();
 
         if (arena != null && arena.getState() == ArenaState.IN_GAME
-                && arena.getCurrentGame() instanceof G5TugOfWarGame) {
+                && arena.getCurrentGame() instanceof G5TugOfWarGame && event.isSneaking()) {
             ((G5TugOfWarGame) arena.getCurrentGame()).handlePullAction(player);
         }
     }

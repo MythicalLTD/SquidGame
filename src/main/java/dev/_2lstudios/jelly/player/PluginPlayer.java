@@ -9,7 +9,7 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.FireworkMeta;
 
-import dev._2lstudios.jelly.utils.ServerUtils;
+import dev._2lstudios.jelly.utils.PlayerCompat;
 
 public class PluginPlayer {
     private final Player player;
@@ -23,8 +23,12 @@ public class PluginPlayer {
     }
 
     public void playSound(final Sound sound) {
-        if (sound != null) {
-            this.getBukkitPlayer().playSound(this.getBukkitPlayer().getLocation(), sound, 1, 1);
+        this.playSound(sound, this.getBukkitPlayer().getLocation(), 1.0F);
+    }
+
+    public void playSound(final Sound sound, final Location location, final float pitch) {
+        if (sound != null && location != null) {
+            PlayerCompat.playSound(this.getBukkitPlayer(), location, sound.name(), 1.0F, pitch);
         }
     }
 
@@ -54,12 +58,7 @@ public class PluginPlayer {
     @SuppressWarnings("deprecation")
     public void sendTitle(final String title, final String subtitle, final int fadeInTime, final int showTime,
             final int fadeOutTime) {
-        if (ServerUtils.isLegacy()) {
-            this.getBukkitPlayer().resetTitle();
-            this.getBukkitPlayer().sendTitle(title, subtitle);
-        } else {
-            this.getBukkitPlayer().sendTitle(title, subtitle, fadeInTime, showTime, fadeOutTime);
-        }
+        PlayerCompat.sendTitle(this.getBukkitPlayer(), title, subtitle, fadeInTime, showTime, fadeOutTime);
     }
 
 }

@@ -24,8 +24,11 @@ import dev._2lstudios.jelly.math.Vector3;
 import dev._2lstudios.jelly.utils.BooleanUtils;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
+import dev._2lstudios.squidgame.arena.ArenaState;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.CompatibilityUtils;
 import dev._2lstudios.squidgame.utils.MessageUtils;
+import dev._2lstudios.squidgame.utils.SkySquidSetupHelper;
 
 public class G6GlassesGame extends ArenaGameBase {
 
@@ -35,18 +38,29 @@ public class G6GlassesGame extends ArenaGameBase {
     private Cuboid glassZone;
     private Cuboid goalZone;
 
-    private List<Block> fakeBlocks;
-    private List<Block> safeBlocks;
-    private List<Block> bridgeBlocks;
+    private final List<Location> bridgeSlotLocations;
+    private final List<Block> fakeBlocks;
+    private final List<Block> safeBlocks;
+    private final List<Block> bridgeBlocks;
+    private final Set<UUID> finishedPlayers;
     private final Map<UUID, Long> solverConfirmations;
+
+    private boolean bridgeActive;
 
     public G6GlassesGame(final Arena arena, final int durationTime) {
         super("§bGlasses", "sixth", durationTime, arena);
 
+        this.bridgeSlotLocations = new ArrayList<>();
         this.fakeBlocks = new ArrayList<>();
         this.safeBlocks = new ArrayList<>();
         this.bridgeBlocks = new ArrayList<>();
+        this.finishedPlayers = new HashSet<>();
         this.solverConfirmations = new HashMap<>();
+    }
+
+    @Override
+    protected boolean delaysPlaySpawnTeleport() {
+        return true;
     }
 
     private Cuboid getGlassZone() {
@@ -69,12 +83,63 @@ public class G6GlassesGame extends ArenaGameBase {
         return this.fakeBlocks.contains(block);
     }
 
+    public boolean isBridgeActive() {
+        return this.bridgeActive && this.getArena().getState() == ArenaState.IN_GAME;
+    }
+
+    public boolean isBelowDeathLevel(final Location location) {
+        if (location == null) {
+            return false;
+        }
+
+        return location.getY() <= this.getDeathY();
+    }
+
+    private int getDeathY() {
+        return this.getArena().getMainConfig().getInt("game-settings.glass-bridge-death-y", 28);
+    }
+
     public List<Block> getSafeBlocks() {
         if (this.safeBlocks.isEmpty()) {
             this.setupBridgePath();
         }
 
         return new ArrayList<>(this.safeBlocks);
+    }
+
+    public void handleMove(final SquidPlayer player, final Location to) {
+        if (this.isBelowDeathLevel(to)) {
+            this.getArena().killPlayer(player);
+            return;
+        }
+
+        if (this.hasFinishedEarly() || this.getGoalZone() == null) {
+            return;
+        }
+
+        final Vector3 position = new Vector3(to.getX(), to.getY(), to.getZ());
+
+        if (!this.getGoalZone().isBetween(position)) {
+            return;
+        }
+
+        if (!this.finishedPlayers.add(player.getBukkitPlayer().getUniqueId())) {
+            return;
+        }
+
+        if (this.haveAllPlayersFinished()) {
+            this.finishEarly();
+        }
+    }
+
+    private boolean haveAllPlayersFinished() {
+        for (final SquidPlayer player : this.getArena().getPlayers()) {
+            if (!this.finishedPlayers.contains(player.getBukkitPlayer().getUniqueId())) {
+                return false;
+            }
+        }
+
+        return !this.getArena().getPlayers().isEmpty();
     }
 
     public boolean breakFakeBlock(final Block block) {
@@ -90,7 +155,7 @@ public class G6GlassesGame extends ArenaGameBase {
 
         while (!queue.isEmpty()) {
             final Block current = queue.remove(0);
-            current.setType(Material.AIR);
+            CompatibilityUtils.setType(current, Material.AIR);
 
             for (final Block neighbor : this.getPanelNeighbors(current)) {
                 if (this.fakeBlocks.contains(neighbor) && broken.add(neighbor)) {
@@ -133,33 +198,97 @@ public class G6GlassesGame extends ArenaGameBase {
     }
 
     public void revealSafePath() {
-        final List<Block> safeBlocks = this.getSafeBlocks();
+        if (this.safeBlocks.isEmpty()) {
+            this.setupBridgePath();
+        }
 
-        for (int i = 0; i < safeBlocks.size(); i++) {
-            final Block block = safeBlocks.get(i);
-            final int delay = i * 4;
+        final Set<Block> remainingSafe = new HashSet<>(this.safeBlocks);
+        int panelIndex = 0;
 
-            Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
-                block.setType(Material.GOLD_BLOCK);
-            }, delay);
+        while (!remainingSafe.isEmpty()) {
+            final Block start = remainingSafe.iterator().next();
+            final List<Block> panel = new ArrayList<>();
+            final List<Block> queue = new ArrayList<>();
 
-            Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
-                if (block.getType() == Material.GOLD_BLOCK) {
-                    block.setType(Material.EMERALD_BLOCK);
+            queue.add(start);
+            remainingSafe.remove(start);
+
+            while (!queue.isEmpty()) {
+                final Block block = queue.remove(0);
+                panel.add(block);
+
+                for (final Block neighbor : this.getPanelNeighbors(block)) {
+                    if (remainingSafe.remove(neighbor)) {
+                        queue.add(neighbor);
+                    }
                 }
-            }, delay + 12L);
+            }
+
+            final int delay = panelIndex * 8;
+
+            for (final Block block : panel) {
+                Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
+                    if (this.getArena().getState() != ArenaState.IN_GAME || !this.bridgeBlocks.contains(block)) {
+                        return;
+                    }
+
+                    CompatibilityUtils.setType(block, Material.GOLD_BLOCK);
+                }, delay);
+
+                Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
+                    if (this.getArena().getState() != ArenaState.IN_GAME) {
+                        return;
+                    }
+
+                    if (block.getType() == Material.GOLD_BLOCK) {
+                        CompatibilityUtils.setType(block, Material.EMERALD_BLOCK);
+                    }
+                }, delay + 12L);
+            }
+
+            panelIndex++;
+        }
+    }
+
+    private void captureBridgeSlots() {
+        if (!this.bridgeSlotLocations.isEmpty()) {
+            return;
+        }
+
+        final Cuboid zone = this.getGlassZone();
+        final World world = this.getArena().getWorld();
+
+        if (zone == null || world == null) {
+            return;
+        }
+
+        this.bridgeSlotLocations.addAll(SkySquidSetupHelper.scanGlassBridgeSlots(zone, world));
+    }
+
+    private void refreshBridgeBlocks() {
+        this.bridgeBlocks.clear();
+        final World world = this.getArena().getWorld();
+
+        for (final Location location : this.bridgeSlotLocations) {
+            location.setWorld(world);
+            this.bridgeBlocks.add(world.getBlockAt(location.getBlockX(), location.getBlockY(), location.getBlockZ()));
         }
     }
 
     private void setupBridgePath() {
         this.fakeBlocks.clear();
         this.safeBlocks.clear();
-        this.bridgeBlocks = this.findBridgeBlocks();
+        this.refreshBridgeBlocks();
+
+        if (this.bridgeBlocks.isEmpty()) {
+            return;
+        }
 
         final List<List<Block>> panels = this.findGlassPanels(this.bridgeBlocks);
         final List<List<List<Block>>> steps = this.groupPanelsByBridgeStep(panels);
+        final boolean crossUsesZ = !this.useZAsBridgeAxis();
 
-        for (final List<List<Block>> step : steps) {
+        for (final List<List<Block>> step : this.normalizeSteps(steps)) {
             if (step.size() < 2) {
                 for (final List<Block> panel : step) {
                     this.safeBlocks.addAll(panel);
@@ -169,10 +298,10 @@ public class G6GlassesGame extends ArenaGameBase {
             }
 
             Collections.sort(step, (firstPanel, secondPanel) -> Double.compare(
-                    this.getPanelAverage(firstPanel, !this.useZAsBridgeAxis()),
-                    this.getPanelAverage(secondPanel, !this.useZAsBridgeAxis())));
+                    this.getPanelAverage(firstPanel, crossUsesZ),
+                    this.getPanelAverage(secondPanel, crossUsesZ)));
 
-            final int fakeIndex = step.size() == 2 && BooleanUtils.randomBoolean() ? 0 : step.size() - 1;
+            final int fakeIndex = BooleanUtils.randomBoolean() ? 0 : 1;
 
             for (int i = 0; i < step.size(); i++) {
                 if (i == fakeIndex) {
@@ -184,31 +313,27 @@ public class G6GlassesGame extends ArenaGameBase {
         }
     }
 
-    private List<Block> findBridgeBlocks() {
-        final List<Block> blocks = new ArrayList<>();
-        final World world = this.getArena().getWorld();
-        final Vector3 first = this.getGlassZone().getFirstPoint();
-        final Vector3 second = this.getGlassZone().getSecondPoint();
-        final int minX = (int) Math.min(first.getX(), second.getX());
-        final int maxX = (int) Math.max(first.getX(), second.getX());
-        final int minY = (int) Math.min(first.getY(), second.getY());
-        final int maxY = (int) Math.max(first.getY(), second.getY());
-        final int minZ = (int) Math.min(first.getZ(), second.getZ());
-        final int maxZ = (int) Math.max(first.getZ(), second.getZ());
+    private List<List<List<Block>>> normalizeSteps(final List<List<List<Block>>> steps) {
+        final List<List<List<Block>>> normalized = new ArrayList<>();
+        final boolean crossUsesZ = !this.useZAsBridgeAxis();
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int y = minY; y <= maxY; y++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    final Block block = world.getBlockAt(x, y, z);
-
-                    if (this.isGlass(block)) {
-                        blocks.add(block);
-                    }
-                }
+        for (final List<List<Block>> step : steps) {
+            if (step.size() <= 2) {
+                normalized.add(step);
+                continue;
             }
+
+            step.sort((firstPanel, secondPanel) -> Double.compare(
+                    this.getPanelAverage(firstPanel, crossUsesZ),
+                    this.getPanelAverage(secondPanel, crossUsesZ)));
+
+            final List<List<Block>> pair = new ArrayList<>();
+            pair.add(step.get(0));
+            pair.add(step.get(step.size() - 1));
+            normalized.add(pair);
         }
 
-        return blocks;
+        return normalized;
     }
 
     private List<List<Block>> findGlassPanels(final List<Block> blocks) {
@@ -245,21 +370,25 @@ public class G6GlassesGame extends ArenaGameBase {
         final List<List<List<Block>>> steps = new ArrayList<>();
         final boolean useZAsBridgeAxis = this.useZAsBridgeAxis();
         List<List<Block>> currentStep = null;
-        double currentStepPosition = 0.0D;
+        int currentStepKey = Integer.MIN_VALUE;
 
         for (final List<Block> panel : panels) {
-            final double panelPosition = this.getPanelAverage(panel, useZAsBridgeAxis);
+            final int panelStepKey = this.getPanelStepKey(panel, useZAsBridgeAxis);
 
-            if (currentStep == null || Math.abs(panelPosition - currentStepPosition) > 1.5D) {
+            if (currentStep == null || panelStepKey != currentStepKey) {
                 currentStep = new ArrayList<>();
                 steps.add(currentStep);
-                currentStepPosition = panelPosition;
+                currentStepKey = panelStepKey;
             }
 
             currentStep.add(panel);
         }
 
         return steps;
+    }
+
+    private int getPanelStepKey(final List<Block> panel, final boolean useZAsBridgeAxis) {
+        return (int) Math.round(this.getPanelAverage(panel, useZAsBridgeAxis));
     }
 
     private List<Block> getPanelNeighbors(final Block block) {
@@ -269,8 +398,6 @@ public class G6GlassesGame extends ArenaGameBase {
         neighbors.add(block.getRelative(-1, 0, 0));
         neighbors.add(block.getRelative(0, 0, 1));
         neighbors.add(block.getRelative(0, 0, -1));
-        neighbors.add(block.getRelative(0, 1, 0));
-        neighbors.add(block.getRelative(0, -1, 0));
 
         return neighbors;
     }
@@ -292,8 +419,14 @@ public class G6GlassesGame extends ArenaGameBase {
     }
 
     private boolean useZAsBridgeAxis() {
-        final Vector3 first = this.getGlassZone().getFirstPoint();
-        final Vector3 second = this.getGlassZone().getSecondPoint();
+        final Cuboid zone = this.getGlassZone();
+
+        if (zone == null) {
+            return true;
+        }
+
+        final Vector3 first = zone.getFirstPoint();
+        final Vector3 second = zone.getSecondPoint();
 
         return Math.abs(first.getZ() - second.getZ()) >= Math.abs(first.getX() - second.getX());
     }
@@ -308,52 +441,112 @@ public class G6GlassesGame extends ArenaGameBase {
         return total / panel.size();
     }
 
-    private boolean isGlass(final Block block) {
-        return block.getType() == Material.GLASS || block.getType().name().contains("STAINED_GLASS");
-    }
+    private void setBridgeMaterial(final Material material) {
+        final World world = this.getArena().getWorld();
 
-    private void setBridgeBlocks(final Material material) {
-        for (final Block block : this.bridgeBlocks) {
-            block.setType(material);
+        for (final Location location : this.bridgeSlotLocations) {
+            CompatibilityUtils.setType(world.getBlockAt(location.getBlockX(), location.getBlockY(), location.getBlockZ()),
+                    material);
         }
     }
 
     @Override
     public void onExplainStart() {
         super.onExplainStart();
+        this.bridgeActive = false;
+        this.finishedPlayers.clear();
+        this.solverConfirmations.clear();
+        this.captureBridgeSlots();
         this.setupBridgePath();
-        this.setBridgeBlocks(Material.AIR);
+        this.setBridgeMaterial(Material.AIR);
     }
 
     @Override
     public void onStart() {
-        if (this.bridgeBlocks.isEmpty()) {
-            this.setupBridgePath();
+        this.bridgeActive = false;
+        this.finishedPlayers.clear();
+        this.captureBridgeSlots();
+
+        if (this.bridgeSlotLocations.isEmpty()) {
+            this.getArena().broadcastTitle("games.sixth.not-configured.title",
+                    "games.sixth.not-configured.subtitle");
+            Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> this.getArena().setInternalTime(1), 20L);
+            return;
         }
 
-        this.setBridgeBlocks(Material.GLASS);
+        this.setupBridgePath();
+        this.setBridgeMaterial(Material.GLASS);
+
+        final Location start = this.getBridgeStartLocation();
 
         for (final SquidPlayer player : this.getArena().getPlayers()) {
-            this.giveSolverItem(player.getBukkitPlayer());
+            player.teleport(start);
         }
+
+        this.runStartCountdown(3);
+    }
+
+    private Location getBridgeStartLocation() {
+        final Location spawn = this.getPlaySpawnPosition().clone();
+        spawn.setWorld(this.getArena().getWorld());
+        return spawn;
+    }
+
+    private void runStartCountdown(final int secondsLeft) {
+        if (this.getArena().getState() != ArenaState.IN_GAME) {
+            return;
+        }
+
+        if (secondsLeft <= 0) {
+            this.bridgeActive = true;
+
+            for (final SquidPlayer player : this.getArena().getPlayers()) {
+                this.giveSolverItem(player.getBukkitPlayer());
+            }
+
+            this.getArena().broadcastTitle("events.game-start.title", "events.game-start.subtitle");
+            return;
+        }
+
+        MessageUtils.broadcastTitle(SquidGame.getInstance(), this.getArena(), "events.start-countdown.title",
+                "events.start-countdown.subtitle", "{time}", String.valueOf(secondsLeft));
+        this.getArena().broadcastSound(
+                this.getArena().getMainConfig().getSound("game-settings.sounds.arena-countdown", "NOTE_PLING"));
+
+        Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> this.runStartCountdown(secondsLeft - 1),
+                20L);
     }
 
     @Override
     public void onTimeUp() {
+        this.bridgeActive = false;
         this.removeSolverItems();
-        this.setBridgeBlocks(Material.AIR);
+        this.setBridgeMaterial(Material.AIR);
 
-        this.getArena().broadcastTitle("events.game-timeout.title", "events.game-timeout.subtitle");
+        if (!this.hasFinishedEarly()) {
+            this.getArena().broadcastTitle("events.game-timeout.title", "events.game-timeout.subtitle");
+        }
 
         final List<SquidPlayer> alive = new ArrayList<>();
         final List<SquidPlayer> death = new ArrayList<>();
+
+        final Cuboid goal = this.getGoalZone();
+
+        if (goal == null) {
+            if (!this.hasFinishedEarly()) {
+                this.getArena().broadcastTitle("games.sixth.not-configured.title",
+                        "games.sixth.not-configured.subtitle");
+            }
+
+            return;
+        }
 
         for (final SquidPlayer squidPlayer : this.getArena().getPlayers()) {
             final Player player = squidPlayer.getBukkitPlayer();
             final Location location = player.getLocation();
             final Vector3 position = new Vector3(location.getX(), location.getY(), location.getZ());
 
-            if (this.getGoalZone().isBetween(position)) {
+            if (goal.isBetween(position)) {
                 alive.add(squidPlayer);
             } else {
                 death.add(squidPlayer);
@@ -375,6 +568,10 @@ public class G6GlassesGame extends ArenaGameBase {
         }, 40L);
 
         Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
+            if (!this.getArena().canEliminatePlayers()) {
+                return;
+            }
+
             for (final SquidPlayer squidPlayer : death) {
                 this.getArena().killPlayer(squidPlayer);
             }
@@ -383,8 +580,16 @@ public class G6GlassesGame extends ArenaGameBase {
 
     @Override
     public void onStop() {
+        this.bridgeActive = false;
         this.removeSolverItems();
-        this.setBridgeBlocks(Material.GLASS);
+        this.setBridgeMaterial(Material.GLASS);
+        this.fakeBlocks.clear();
+        this.safeBlocks.clear();
+        this.bridgeBlocks.clear();
+        this.finishedPlayers.clear();
+        this.solverConfirmations.clear();
+        this.glassZone = null;
+        this.goalZone = null;
     }
 
     private void giveSolverItem(final Player player) {

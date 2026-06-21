@@ -22,7 +22,13 @@ public class PlayerDeathListener implements Listener {
         final Player bukkitPlayer = e.getEntity();
         final SquidPlayer player = (SquidPlayer) this.plugin.getPlayerManager().getPlayer(bukkitPlayer);
 
-        if (player != null && player.getArena() != null && !player.isSpectator()) {
+        if (player != null && player.getArena() != null && !player.isSpectator()
+                && player.getArena().canEliminatePlayers()
+                && player.getArena().getPlayers().contains(player)) {
+            e.setKeepInventory(true);
+            e.getDrops().clear();
+            e.setDeathMessage(null);
+
             final Arena arena = player.getArena();
             arena.killPlayer(player);
         }

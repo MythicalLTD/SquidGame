@@ -14,6 +14,14 @@ game-settings:
   disable-fire-spread: true
   disable-ice-snow-melt: true
   disable-advancement-announcements: true
+  lock-world-time: true
+  locked-world-time: 18000
+  red-light-trap-scan-height: 40
+  red-light-trap-lever-delay-ticks: 8
+  red-light-trap-tripwire-delay-ticks: 18
+  red-light-trap-shoot-delay-ticks: 30
+  red-light-trap-kill-delay-ticks: 50
+  red-light-trap-arrow-speed: 2.8
   min-players: 10
   force-start-min-players: 2
   max-players: 350
@@ -24,31 +32,50 @@ game-settings:
   tug-of-war-pull-power: 3
   tug-of-war-sneak-pull-power: 5
   tug-of-war-sudden-death-time: 15
-  mingle-rounds: 5
+  tug-of-war-start-teleport-delay-ticks: 40
+  red-light-start-teleport-delay-ticks: 40
+  glass-bridge-start-teleport-delay-ticks: 40
+  glass-bridge-death-y: 28
+  mingle-rounds: 3
   mingle-round-time: 30
-  mingle-vote-enabled: true
-  mingle-skip-vote-percent: 50
-  mingle-min-group-size: 3
-  mingle-max-group-size: 10
+  mingle-music-min-delay: 5
+  mingle-music-max-delay: 12
+  mingle-nbs-music-enabled: true
+  mingle-nbs-music-volume: 90
+  mingle-room-max-distance: 200
+  mingle-room-horizontal-padding: 2.0
+  mingle-room-near-radius: 3.0
+  mingle-knockback-power: 1.0
+  mingle-knockback-vertical: 0.35
+  mingle-min-group-size: 2
+  mingle-max-group-size: 8
   mingle-quick-room-radius: 3
   mingle-quick-room-height: 4
-  hide-and-seek-hide-time: 5
-  jump-rope-min-sweep-delay: 2
-  jump-rope-max-sweep-delay: 5
-  jump-rope-warning-time: 3
-  sky-squid-round-time: 900
-  sky-squid-final-round-time: 600
+  mingle-platform-radius: 10
+  mingle-platform-height: 4
+  hide-and-seek-hide-time: 15
+  sky-squid-round-time: 30
+  sky-squid-final-round-time: 60
+  sky-squid-bridge-cooldown: 15
+  sky-squid-knockback-power: 1.2
+  sky-squid-knockback-vertical: 0.4
+  sky-squid-start-teleport-delay-ticks: 40
+  sky-squid-tower-radius: 6
+  sky-squid-tower-height-below: 1
+  sky-squid-tower-height-above: 5
+  sky-squid-button-search-radius: 8
+  sky-squid-safe-zone-padding: 2.0
+  sky-squid-bridge-marker-scan-horizontal: 14.0
+  sky-squid-bridge-marker-scan-vertical: 4
   game-time:
-    "1": 60
+    "1": 160
     "3": 60
-    "4": 600
     "5": 120
-    "6": 300
+    "6": 180
     "8": 180
-    "10": 1800
-    "11": 0
+    "10": 100
     "12": 180
-    "13": 0
+    "13": 450
   rewards:
   - ""
   sounds:
@@ -57,6 +84,9 @@ game-settings:
     player-death: EXPLODE
     arena-starting: CLICK
     arena-countdown: NOTE_PLING
+    mingle-music: NOTE_PLING
+    mingle-announce: NOTE_BASS
+    tug-of-war-pull: IRONGOLEM_HIT
     arena-start: ORB_PICKUP
     green-light: GHAST_MOAN
     red-light: BLAZE_HIT
@@ -74,9 +104,67 @@ game-settings:
   #    grass-break: BLOCK_GLASS_BREAK
 
 lobby:
+  give-cosmetics-item: true
+  cosmetics-slot: 4
+  cosmetics-in-game: true
+  particle-interval: 8
+  give-mute-music-item: true
+  mute-music-slot: 8
+  music:
+    enabled: true
+    volume: 100
+    volume-multiplier: 2.0
+    tempo-multiplier: 1.0
+    cosmetic-enabled: true
+    cosmetic-volume: 100
+    cosmetic-cooldown-seconds: 120
   world: ""
   x: 0
   y: 0
   z: 0
   yaw: 0
   pitch: 0
+
+economy:
+  enabled: true
+  starting-coins: 100
+  admin-bypass: true
+  database:
+    type: mysql
+    table-prefix: sg_
+    sqlite:
+      file: data.db
+    mysql:
+      host: de-prod-2-db.mythical.systems
+      port: 3306
+      database: s15_squid
+      username: u15_5ufIEsmok1
+      password: "qrYSM8Ev8u1KI9cV"
+      use-ssl: false
+  stats:
+    record-wins: true
+    record-deaths: true
+    record-games-played: true
+  rewards:
+    win-coins: 100
+    participation-coins: 15
+  shop:
+    cosmetic-default-price: 200
+    music-unlock-default-price: 400
+    music-play-cost: 25
+    free-cosmetics:
+    - none
+    free-music: []
+    cosmetic-prices:
+      hearts: 0
+      flames: 150
+      ink-cloud: 150
+      green-light: 175
+      red-alert: 175
+      stars: 200
+      rainbow: 250
+      notes: 200
+      crown: 300
+      top-hat: 250
+    music-prices: {}
+    music-play-costs: {}

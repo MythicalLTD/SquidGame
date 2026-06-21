@@ -5,6 +5,8 @@ import dev._2lstudios.jelly.commands.CommandContext;
 import dev._2lstudios.jelly.commands.CommandListener;
 
 import dev._2lstudios.squidgame.SquidGame;
+import dev._2lstudios.squidgame.commands.admin.SquidAdminCommand;
+import dev._2lstudios.squidgame.commands.admin.SquidCoinsCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidCreateArenaCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidDeleteArenaCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidListArenaCommand;
@@ -16,11 +18,14 @@ import dev._2lstudios.squidgame.commands.admin.SquidEditArenaCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidSetTimeCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidSkipGameCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidStopArenaCommand;
+import dev._2lstudios.squidgame.commands.admin.SquidTpMinigameCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidTrollCommand;
 import dev._2lstudios.squidgame.commands.admin.SquidWandCommand;
+import dev._2lstudios.squidgame.commands.game.SquidHideAndSeekSwapCommand;
 import dev._2lstudios.squidgame.commands.game.SquidJoinCommand;
 import dev._2lstudios.squidgame.commands.game.SquidLeaveCommand;
 import dev._2lstudios.squidgame.commands.game.SquidStartCommand;
+import dev._2lstudios.squidgame.commands.game.SquidStatsCommand;
 import dev._2lstudios.squidgame.utils.MessageUtils;
 
 @Command(name = "squidgame")
@@ -35,16 +40,21 @@ public class SquidGameCommand extends CommandListener {
         this.addSubcommand(new SquidWandCommand());
         this.addSubcommand(new SquidReviveCommand());
         this.addSubcommand(new SquidReloadCommand());
+        this.addSubcommand(new SquidAdminCommand());
+        this.addSubcommand(new SquidCoinsCommand());
         this.addSubcommand(new SquidStopArenaCommand());
         this.addSubcommand(new SquidSkipGameCommand());
         this.addSubcommand(new SquidSetTimeCommand());
         this.addSubcommand(new SquidTrollCommand());
         this.addSubcommand(new SquidRevealGlassCommand());
+        this.addSubcommand(new SquidTpMinigameCommand());
 
         // Game commands
         this.addSubcommand(new SquidLeaveCommand());
         this.addSubcommand(new SquidJoinCommand());
         this.addSubcommand(new SquidStartCommand());
+        this.addSubcommand(new SquidHideAndSeekSwapCommand());
+        this.addSubcommand(new SquidStatsCommand());
     }
 
     @Override

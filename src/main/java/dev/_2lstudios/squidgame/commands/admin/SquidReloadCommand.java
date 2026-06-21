@@ -16,6 +16,8 @@ public class SquidReloadCommand extends CommandListener {
         plugin.getMainConfig();
         plugin.getMessagesConfig();
         plugin.getScoreboardConfig();
+        plugin.getNbsMusicManager().reloadSongs();
+        plugin.getNbsMusicManager().refreshDefaultMusicForEveryone();
 
         MessageUtils.send(plugin, context.getSender(), "commands.reload.done");
     }

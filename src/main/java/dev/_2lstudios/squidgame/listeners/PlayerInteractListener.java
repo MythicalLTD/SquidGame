@@ -1,6 +1,7 @@
 package dev._2lstudios.squidgame.listeners;
 
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -9,12 +10,14 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.arena.ArenaState;
-import dev._2lstudios.squidgame.arena.games.G10HideAndSeekGame;
-import dev._2lstudios.squidgame.arena.games.G4MarblesGame;
 import dev._2lstudios.squidgame.arena.games.G5TugOfWarGame;
 import dev._2lstudios.squidgame.arena.games.G6GlassesGame;
+import dev._2lstudios.squidgame.arena.games.G12SkySquidGame;
+import dev._2lstudios.squidgame.arena.games.G8MingleGame;
+import dev._2lstudios.squidgame.gui.CosmeticsGUI;
 import dev._2lstudios.squidgame.player.PlayerWand;
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.utils.LobbyItems;
 import dev._2lstudios.squidgame.utils.MessageUtils;
 
 public class PlayerInteractListener implements Listener {
@@ -33,7 +36,24 @@ public class PlayerInteractListener implements Listener {
             return;
         }
 
-        if (player.getWand() != null && e.getItem() != null && e.getItem().getType().equals(Material.BLAZE_ROD)) {
+        final Arena arena = player.getArena();
+
+        if (LobbyItems.hasLobbyAccess(player) && e.getItem() != null && LobbyItems.isCosmeticsItem(e.getItem())
+                && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            e.setCancelled(true);
+            new CosmeticsGUI(player).open(e.getPlayer());
+            return;
+        }
+
+        if (LobbyItems.hasLobbyAccess(player) && e.getItem() != null && LobbyItems.isMusicMenuItem(e.getItem())
+                && (e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)) {
+            e.setCancelled(true);
+            LobbyItems.openMusicMenu(player);
+            return;
+        }
+
+        if (player.getWand() != null && e.getItem() != null && e.getItem().getType().equals(Material.BLAZE_ROD)
+                && (arena == null || arena.getState() != ArenaState.IN_GAME) && e.getClickedBlock() != null) {
             final PlayerWand wand = player.getWand();
 
             if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
@@ -48,8 +68,6 @@ public class PlayerInteractListener implements Listener {
 
             e.setCancelled(true);
         }
-
-        final Arena arena = player.getArena();
 
         if (arena != null && arena.isStartItem(e.getItem())) {
             e.setCancelled(true);
@@ -66,13 +84,6 @@ public class PlayerInteractListener implements Listener {
         }
 
         if (arena != null && arena.getState() == ArenaState.IN_GAME
-                && arena.getCurrentGame() instanceof G4MarblesGame && e.getItem() != null
-                && e.getItem().getType().equals(Material.CLAY_BALL)) {
-            ((G4MarblesGame) arena.getCurrentGame()).openChallenge(player);
-            e.setCancelled(true);
-        }
-
-        if (arena != null && arena.getState() == ArenaState.IN_GAME
                 && arena.getCurrentGame() instanceof G5TugOfWarGame && e.getItem() != null
                 && e.getItem().getType().equals(Material.STRING)) {
             ((G5TugOfWarGame) arena.getCurrentGame()).handlePullAction(player);
@@ -83,12 +94,22 @@ public class PlayerInteractListener implements Listener {
                 && ((G6GlassesGame) arena.getCurrentGame()).isSolverItem(e.getItem())) {
             ((G6GlassesGame) arena.getCurrentGame()).handleSolverUse(player);
             e.setCancelled(true);
-            return;
         }
 
         if (arena != null && arena.getState() == ArenaState.IN_GAME
-                && arena.getCurrentGame() instanceof G10HideAndSeekGame && e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            if (((G10HideAndSeekGame) arena.getCurrentGame()).handleDoorUnlock(player, e.getClickedBlock(), e.getItem())) {
+                && arena.getCurrentGame() instanceof G12SkySquidGame
+                && (e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.LEFT_CLICK_BLOCK)) {
+            final org.bukkit.Location clicked = e.getClickedBlock() != null ? e.getClickedBlock().getLocation() : null;
+
+            if (((G12SkySquidGame) arena.getCurrentGame()).handleButtonPress(player, clicked)) {
+                e.setCancelled(true);
+            }
+        }
+
+        if (arena != null && arena.getState() == ArenaState.IN_GAME
+                && arena.getCurrentGame() instanceof G8MingleGame && e.getAction() == Action.RIGHT_CLICK_BLOCK
+                && e.getClickedBlock() != null) {
+            if (((G8MingleGame) arena.getCurrentGame()).handleDoorInteract(player, e.getClickedBlock())) {
                 e.setCancelled(true);
             }
         }

@@ -35,7 +35,7 @@ public class MessageUtils {
         final String subtitle = format(plugin, subtitleKey, replacements);
 
         for (final SquidPlayer player : arena.getAllPlayers()) {
-            player.getBukkitPlayer().sendTitle(title, subtitle);
+            player.sendTitleRaw(title, subtitle, 2);
         }
     }
 }

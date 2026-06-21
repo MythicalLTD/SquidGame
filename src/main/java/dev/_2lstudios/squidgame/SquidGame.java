@@ -8,7 +8,11 @@ import org.bukkit.plugin.PluginManager;
 import dev._2lstudios.jelly.JellyPlugin;
 import dev._2lstudios.jelly.config.Configuration;
 
+import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.arena.ArenaManager;
+import dev._2lstudios.squidgame.cosmetics.CosmeticManager;
+import dev._2lstudios.squidgame.economy.ShopManager;
+import dev._2lstudios.squidgame.music.NbsMusicManager;
 import dev._2lstudios.squidgame.commands.SquidGameCommand;
 import dev._2lstudios.squidgame.commands.admin.BuildCommand;
 import dev._2lstudios.squidgame.commands.admin.FlyCommand;
@@ -23,21 +27,30 @@ import dev._2lstudios.squidgame.listeners.EntityDamageListener;
 import dev._2lstudios.squidgame.listeners.FireProtectionListener;
 import dev._2lstudios.squidgame.listeners.FoodLevelChangeListener;
 import dev._2lstudios.squidgame.listeners.PlayerDeathListener;
+import dev._2lstudios.squidgame.listeners.PlayerDropItemListener;
 import dev._2lstudios.squidgame.listeners.PlayerInteractEntityListener;
 import dev._2lstudios.squidgame.listeners.PlayerInteractListener;
 import dev._2lstudios.squidgame.listeners.PlayerJoinListener;
 import dev._2lstudios.squidgame.listeners.PlayerMoveListener;
+import dev._2lstudios.squidgame.listeners.PlayerPickupItemListener;
 import dev._2lstudios.squidgame.listeners.PlayerQuitListener;
 import dev._2lstudios.squidgame.listeners.PlayerToggleSneakListener;
 import dev._2lstudios.squidgame.listeners.WeatherLockListener;
+import dev._2lstudios.squidgame.player.PlayerDataManager;
 import dev._2lstudios.squidgame.player.PlayerManager;
 import dev._2lstudios.squidgame.tasks.ArenaTickTask;
+import dev._2lstudios.squidgame.tasks.WorldTimeLockTask;
+import dev._2lstudios.squidgame.utils.WorldTimeUtils;
 
 public class SquidGame extends JellyPlugin {
 
     private ScoreboardHook scoreboardHook;
     private ArenaManager arenaManger;
     private PlayerManager playerManager;
+    private CosmeticManager cosmeticManager;
+    private NbsMusicManager nbsMusicManager;
+    private PlayerDataManager playerDataManager;
+    private ShopManager shopManager;
 
     private boolean usePAPI;
 
@@ -56,11 +69,14 @@ public class SquidGame extends JellyPlugin {
             this.usePAPI = true;
         }
 
-        // Instantiate managers
-        this.arenaManger = new ArenaManager(this);
+        // Instantiate managers (music/cosmetics before arenas — Arena.resetArena uses them)
         this.playerManager = new PlayerManager(this);
-
-        final ScoreboardHook scoreboardHook = new ScoreboardHook(pluginManager);
+        this.playerDataManager = new PlayerDataManager(this);
+        this.playerDataManager.initialize();
+        this.shopManager = new ShopManager(this, this.playerDataManager);
+        this.cosmeticManager = new CosmeticManager(this);
+        this.nbsMusicManager = new NbsMusicManager(this);
+        this.arenaManger = new ArenaManager(this);
 
         // Register commands
         this.addCommand(new SquidGameCommand());
@@ -79,8 +95,10 @@ public class SquidGame extends JellyPlugin {
         this.addEventListener(new PlayerDeathListener(this));
         this.addEventListener(new PlayerInteractEntityListener(this));
         this.addEventListener(new PlayerInteractListener(this));
-        this.addEventListener(new PlayerJoinListener(this, scoreboardHook));
+        this.addEventListener(new PlayerJoinListener(this));
         this.addEventListener(new PlayerMoveListener(this));
+        this.addEventListener(new PlayerDropItemListener(this));
+        this.addEventListener(new PlayerPickupItemListener(this));
         this.addEventListener(new PlayerQuitListener(this));
         this.addEventListener(new PlayerToggleSneakListener(this));
         this.addEventListener(new WeatherLockListener(this));
@@ -90,6 +108,7 @@ public class SquidGame extends JellyPlugin {
 
         // Register tasks
         Bukkit.getScheduler().runTaskTimer(this, new ArenaTickTask(this), 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(this, new WorldTimeLockTask(), 20L, 20L);
 
         // Enable inventory API
         this.useInventoryAPI();
@@ -101,6 +120,7 @@ public class SquidGame extends JellyPlugin {
         this.applyWeatherLock();
         this.applyFireProtection();
         this.applyChatNoiseProtection();
+        WorldTimeUtils.applyLockToManagedWorlds();
 
         // Banner
         this.getLogger().log(Level.INFO, "§7§m==========================================================");
@@ -112,9 +132,36 @@ public class SquidGame extends JellyPlugin {
                 + (this.usePAPI ? "§aYes" : "§cNo §7(Placeholders option will be disabled)"));
         this.getLogger().log(Level.INFO, "§7- §dScoreboard Hook: "
                 + (this.scoreboardHook.canHook() ? "§aYes" : "§cNo §7(The scoreboards option will be disabled)"));
+        if (this.playerDataManager.isEnabled()) {
+            this.getLogger().log(Level.INFO, "§7- §dPlayer database: "
+                    + (this.playerDataManager.isDatabaseReady()
+                            ? "§a" + this.playerDataManager.getDatabaseType().name().toLowerCase()
+                            : "§cFailed"));
+        }
         this.getLogger().log(Level.INFO, "§r");
         this.getLogger().log(Level.INFO, "§7§m==========================================================");
 
+    }
+
+    @Override
+    public void onDisable() {
+        if (this.playerDataManager != null) {
+            this.playerDataManager.shutdown();
+        }
+
+        if (this.cosmeticManager != null) {
+            this.cosmeticManager.shutdown();
+        }
+
+        if (this.nbsMusicManager != null) {
+            this.nbsMusicManager.shutdown();
+        }
+
+        if (this.arenaManger != null) {
+            for (final Arena arena : this.arenaManger.getArenas()) {
+                arena.resetArena();
+            }
+        }
     }
 
     /* Configuration */
@@ -141,6 +188,22 @@ public class SquidGame extends JellyPlugin {
 
     public ScoreboardHook getScoreboardHook() {
         return scoreboardHook;
+    }
+
+    public CosmeticManager getCosmeticManager() {
+        return this.cosmeticManager;
+    }
+
+    public NbsMusicManager getNbsMusicManager() {
+        return this.nbsMusicManager;
+    }
+
+    public PlayerDataManager getPlayerDataManager() {
+        return this.playerDataManager;
+    }
+
+    public ShopManager getShopManager() {
+        return this.shopManager;
     }
 
     private void applyWeatherLock() {

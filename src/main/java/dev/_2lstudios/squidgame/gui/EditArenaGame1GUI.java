@@ -24,14 +24,24 @@ public class EditArenaGame1GUI extends InventoryGUI {
 
     @Override
     public void init() {
-        this.addItem(0, this.createItem("§eSpawn point", Material.COMPASS, "§r\n§7Set at your current location\n§r"), 2,
+        this.addItem(0, this.createItem("§eSpawn point", Material.COMPASS, "§r\n§7Start line when the game begins\n§r"), 2,
                 2);
-        this.addItem(1, this.createItem("§eBarrier", Material.BEDROCK, "§r\n§7Set with your location wand\n§r"), 4, 2);
+        this.addItem(4, this.createItem("§eIntermission lobby", Material.BEACON,
+                "§r\n§7Where players wait during intermission\n§7Falls back to arena waiting room\n§r"), 4, 2);
+        this.addItem(1, this.createItem("§eBarrier", Material.BEDROCK, "§r\n§7Set with your location wand\n§r"), 6, 2);
         this.addItem(2, this.createItem("§eKill Zone", Material.ENDER_PEARL, "§r\n§7Set with your location wand\n§r"),
-                6, 2);
-        this.addItem(3, this.createItem("§eGoal", Material.ARMOR_STAND, "§r\n§7Set with your location wand\n§r"), 8, 2);
+                2, 4);
+        this.addItem(3, this.createItem("§eGoal", Material.ARMOR_STAND, "§r\n§7Set with your location wand\n§r"), 6, 4);
 
-        this.addItem(99, this.createItem("§cBack", Material.BARRIER), 5, 4);
+        final int ironBarCount = EditArenaIronBars.getCount(this.arena, "first");
+        this.addItem(EditArenaIronBars.ADD_ID,
+                this.createItem("§eAdd iron bar zone", EditArenaIronBars.buttonMaterial(),
+                        EditArenaIronBars.addButtonLore(ironBarCount)),
+                2, 5);
+        this.addItem(EditArenaIronBars.CLEAR_ID,
+                this.createItem("§cClear iron bar zones", Material.TNT, EditArenaIronBars.clearButtonLore()), 6, 5);
+
+        this.addItem(99, this.createItem("§cBack", Material.BARRIER), 4, 5);
     }
 
     @Override
@@ -43,10 +53,15 @@ public class EditArenaGame1GUI extends InventoryGUI {
         if (id == 99) {
             this.back(player);
             return;
+        } else if (EditArenaIronBars.handle(this.arena, player, "first", "Red Light, Green Light", id)) {
         } else if (id == 0) {
             this.arena.getConfig().setLocation("games.first.spawn", player.getLocation(), false);
             MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}",
                     "Red Light, Green Light spawn");
+        } else if (id == 4) {
+            this.arena.getConfig().setLocation("games.first.lobby", player.getLocation(), false);
+            MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}",
+                    "Red Light, Green Light intermission lobby");
         } else {
             String key = "games.first";
             String name = "Red Light, Green Light";

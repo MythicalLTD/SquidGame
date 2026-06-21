@@ -19,7 +19,6 @@ Minecraft Minigame inspired by the famous and trending Netflix series "Squid Gam
 - [x] Intermission  
 - [x] First Game  
 - [x] Third Game  
-- [x] Fourth Game  
 - [x] Fifth Game  
 - [x] Sixth Game  
 - [x] Mingle Game  

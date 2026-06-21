@@ -1,5 +1,6 @@
 mvn clean package 
 
+rm -rf server/plugins/SquidGame.jar
 cp target/SquidGame.jar server/plugins/SquidGame.jar
 
 cd server

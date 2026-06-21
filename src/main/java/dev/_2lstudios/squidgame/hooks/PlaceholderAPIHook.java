@@ -50,13 +50,58 @@ public class PlaceholderAPIHook extends PlaceholderExpansion {
 
     /* Formatters */
     private String requestPlayerPlaceholder(final SquidPlayer player, final String identifier) {
-        switch (identifier) {
+        if (identifier.equals("name")) {
+            return player == null ? "" : player.getBukkitPlayer().getName();
+        }
+
+        if (player == null || !this.plugin.getPlayerDataManager().isEnabled()) {
+            switch (identifier) {
             case "wins":
-                return "0";
             case "deaths":
+            case "games":
+            case "coins":
+            case "kdr":
                 return "0";
             default:
                 return null;
+            }
+        }
+
+        final dev._2lstudios.squidgame.player.PlayerProfile profile = this.plugin.getPlayerDataManager()
+                .getProfile(player.getBukkitPlayer().getUniqueId());
+
+        if (profile == null) {
+            switch (identifier) {
+            case "wins":
+            case "deaths":
+            case "games":
+            case "coins":
+            case "kdr":
+                return "0";
+            default:
+                return null;
+            }
+        }
+
+        switch (identifier) {
+        case "wins":
+            return String.valueOf(profile.getWins());
+        case "deaths":
+            return String.valueOf(profile.getDeaths());
+        case "games":
+            return String.valueOf(profile.getGamesPlayed());
+        case "coins":
+            return String.valueOf(profile.getCoins());
+        case "kdr":
+            if (profile.getDeaths() <= 0) {
+                return String.valueOf(profile.getWins());
+            }
+
+            return String.format("%.2f", profile.getWins() / (double) profile.getDeaths());
+        case "name":
+            return player.getBukkitPlayer().getName();
+        default:
+            return null;
         }
     }
 

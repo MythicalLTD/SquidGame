@@ -23,6 +23,15 @@ public class EditArenaGame3GUI extends InventoryGUI {
     public void init() {
         this.addItem(0, this.createItem("§eBattle spawn", Material.DIAMOND_SWORD,
                 "§r\n§7Set where players spawn for Battle.\n§7If unset, intermission lobby is used.\n§r"), 5, 2);
+
+        final int ironBarCount = EditArenaIronBars.getCount(this.arena, "third");
+        this.addItem(EditArenaIronBars.ADD_ID,
+                this.createItem("§eAdd iron bar zone", EditArenaIronBars.buttonMaterial(),
+                        EditArenaIronBars.addButtonLore(ironBarCount)),
+                2, 3);
+        this.addItem(EditArenaIronBars.CLEAR_ID,
+                this.createItem("§cClear iron bar zones", Material.TNT, EditArenaIronBars.clearButtonLore()), 8, 3);
+
         this.addItem(99, this.createItem("§cBack", Material.BARRIER), 5, 4);
     }
 
@@ -34,6 +43,7 @@ public class EditArenaGame3GUI extends InventoryGUI {
         } else if (id == 0) {
             this.arena.getConfig().setLocation("games.third.spawn", player.getLocation(), false);
             MessageUtils.send(SquidGame.getInstance(), player, "setup.location-set", "{name}", "Battle spawn");
+        } else if (EditArenaIronBars.handle(this.arena, player, "third", "Lights Off", id)) {
         }
 
         try {

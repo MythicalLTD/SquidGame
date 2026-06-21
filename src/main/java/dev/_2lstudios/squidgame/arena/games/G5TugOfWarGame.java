@@ -3,23 +3,23 @@ package dev._2lstudios.squidgame.arena.games;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.block.Block;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 
 import dev._2lstudios.jelly.config.Configuration;
-import dev._2lstudios.jelly.gui.InventoryGUI;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.arena.ArenaState;
@@ -30,61 +30,114 @@ public class G5TugOfWarGame extends ArenaGameBase {
 
     private final Map<UUID, Integer> teams;
     private final Map<UUID, Long> lastPulls;
-    private final Map<Block, Material> ropeBlocks;
-    private final Set<UUID> completed;
+    private final Map<UUID, Location> anchors;
+    private final java.util.Set<UUID> completed;
 
     private int ropePosition;
     private int team1Pulls;
     private int team2Pulls;
     private boolean finished;
     private boolean suddenDeath;
-    private Block ropeMarker;
+    private BukkitTask displayTask;
 
     public G5TugOfWarGame(final Arena arena, final int durationTime) {
         super("§eTug of War", "fifth", durationTime, arena);
 
         this.teams = new HashMap<>();
         this.lastPulls = new HashMap<>();
-        this.ropeBlocks = new HashMap<>();
-        this.completed = new HashSet<>();
+        this.anchors = new HashMap<>();
+        this.completed = new java.util.HashSet<>();
     }
 
     @Override
-    public Location getSpawnPosition() {
-        final Configuration config = this.getArena().getConfig();
-        final Location location = config.getLocation("games.fifth.spawn", false);
-        location.setWorld(this.getArena().getWorld());
-        return location;
+    public Location getLobbyPosition() {
+        return this.resolveArenaLocation("games.fifth.lobby", "arena.waiting_room", "arena.prelobby");
+    }
+
+    @Override
+    protected boolean delaysPlaySpawnTeleport() {
+        return true;
     }
 
     @Override
     public void onStart() {
         this.teams.clear();
         this.lastPulls.clear();
+        this.anchors.clear();
         this.completed.clear();
         this.ropePosition = 0;
         this.team1Pulls = 0;
         this.team2Pulls = 0;
         this.finished = false;
         this.suddenDeath = false;
-        this.ropeMarker = null;
+        this.getArena().setPvPAllowed(false);
+
+        if (!this.isConfigured()) {
+            this.getArena().broadcastTitle("games.fifth.not-configured.title",
+                    "games.fifth.not-configured.subtitle");
+            Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> this.getArena().setInternalTime(1), 20L);
+            return;
+        }
+
         this.assignTeams();
-        this.spawnVisualRope();
+        this.startCountdown();
+    }
+
+    private void startCountdown() {
+        if (this.finished || this.getArena().getState() != ArenaState.IN_GAME) {
+            return;
+        }
 
         for (final SquidPlayer player : this.getArena().getPlayers()) {
-            this.teleportToTeamPlatform(player);
+            this.teleportToTeamAnchor(player);
+        }
+
+        this.runStartCountdown(3);
+    }
+
+    private void runStartCountdown(final int secondsLeft) {
+        if (this.finished || this.getArena().getState() != ArenaState.IN_GAME) {
+            return;
+        }
+
+        if (secondsLeft <= 0) {
+            this.beginTugOfWar();
+            return;
+        }
+
+        MessageUtils.broadcastTitle(SquidGame.getInstance(), this.getArena(), "events.start-countdown.title",
+                "events.start-countdown.subtitle", "{time}", String.valueOf(secondsLeft));
+        this.getArena().broadcastSound(this.getArena().getMainConfig().getSound("game-settings.sounds.arena-countdown",
+                "NOTE_PLING"));
+
+        Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> this.runStartCountdown(secondsLeft - 1),
+                20L);
+    }
+
+    private void beginTugOfWar() {
+        if (this.finished || this.getArena().getState() != ArenaState.IN_GAME) {
+            return;
+        }
+
+        for (final SquidPlayer player : this.getArena().getPlayers()) {
             this.giveRope(player.getBukkitPlayer());
+            this.applyInvisibility(player);
             player.sendTitle("games.fifth.start.title", "games.fifth.start.subtitle", 3);
         }
+
+        this.startDisplayTask();
+        this.broadcastRopeDisplay();
     }
 
     @Override
     public void onStop() {
-        for (final SquidPlayer player : this.getArena().getPlayers()) {
-            this.removeRope(player.getBukkitPlayer());
-        }
+        this.stopDisplayTask();
+        this.clearInvisibility();
 
-        this.removeVisualRope();
+        for (final SquidPlayer player : this.getArena().getAllPlayers()) {
+            this.removeRope(player.getBukkitPlayer());
+            player.sendActionBar("");
+        }
     }
 
     @Override
@@ -114,80 +167,61 @@ public class G5TugOfWarGame extends ArenaGameBase {
         }
     }
 
-    public void openChallenge(final SquidPlayer player) {
-        if (!this.finished && this.getArena().getPlayers().contains(player)) {
-            new TugOfWarGUI(this, player).open(player.getBukkitPlayer());
-        }
+    public boolean isPlaying() {
+        return !this.finished && this.isConfigured();
     }
 
-    public void handleMove(final SquidPlayer player, final Location from, final Location to) {
-        if (this.finished || !this.getArena().getPlayers().contains(player) || !this.isPullMovement(player, from, to)) {
-            return;
+    public boolean shouldLockMovement(final SquidPlayer player, final Location from, final Location to) {
+        if (!this.isPlaying() || !this.getArena().getPlayers().contains(player)) {
+            return false;
         }
 
-        this.handlePullAction(player);
+        final Location anchor = this.anchors.get(player.getBukkitPlayer().getUniqueId());
+        if (anchor == null) {
+            return false;
+        }
+
+        if (from.getBlockX() == to.getBlockX() && from.getBlockY() == to.getBlockY()
+                && from.getBlockZ() == to.getBlockZ()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public Location getLockedLocation(final SquidPlayer player, final Location lookTarget) {
+        final Location anchor = this.anchors.get(player.getBukkitPlayer().getUniqueId());
+        if (anchor == null) {
+            return lookTarget;
+        }
+
+        final Location locked = anchor.clone();
+        locked.setYaw(lookTarget.getYaw());
+        locked.setPitch(lookTarget.getPitch());
+        return locked;
     }
 
     public void handlePullAction(final SquidPlayer player) {
-        if (this.finished || !this.getArena().getPlayers().contains(player)) {
+        if (!this.isPlaying() || !this.getArena().getPlayers().contains(player)) {
             return;
         }
 
         final long now = System.currentTimeMillis();
-        final long lastPull = this.lastPulls.containsKey(player.getBukkitPlayer().getUniqueId())
-                ? this.lastPulls.get(player.getBukkitPlayer().getUniqueId())
-                : 0L;
+        final UUID uuid = player.getBukkitPlayer().getUniqueId();
+        final long lastPull = this.lastPulls.containsKey(uuid) ? this.lastPulls.get(uuid) : 0L;
 
         if (now - lastPull < this.getPullCooldown()) {
             return;
         }
 
-        this.lastPulls.put(player.getBukkitPlayer().getUniqueId(), now);
-        this.pull(player, false);
+        this.lastPulls.put(uuid, now);
+        this.pull(player);
     }
 
-    private boolean isPullMovement(final SquidPlayer player, final Location from, final Location to) {
+    private void pull(final SquidPlayer player) {
         final int team = this.getTeam(player);
-
-        if (team == 0) {
-            return false;
-        }
-
-        final Vector movement = to.toVector().subtract(from.toVector());
-        movement.setY(0);
-
-        if (movement.lengthSquared() < 0.0025) {
-            return false;
-        }
-
-        final Location ownPlatform = this.getTeamLocation(team);
-        final Location enemyPlatform = this.getTeamLocation(team == 1 ? 2 : 1);
-        final Vector towardEnemy = enemyPlatform.toVector().subtract(ownPlatform.toVector());
-        final Vector awayFromEnemy = ownPlatform.toVector().subtract(enemyPlatform.toVector());
-        towardEnemy.setY(0);
-        awayFromEnemy.setY(0);
-
-        if (towardEnemy.lengthSquared() <= 0 || awayFromEnemy.lengthSquared() <= 0) {
-            return false;
-        }
-
-        final Vector facing = to.getDirection();
-        facing.setY(0);
-
-        if (facing.lengthSquared() <= 0 || facing.normalize().dot(towardEnemy.normalize()) < 0.25) {
-            return false;
-        }
-
-        return movement.normalize().dot(awayFromEnemy.normalize()) > 0.45;
-    }
-
-    private void pull(final SquidPlayer player, final boolean reopenGui) {
-        if (this.finished || !this.getArena().getPlayers().contains(player)) {
-            return;
-        }
-
-        final int team = this.getTeam(player);
-        final int pullPower = player.getBukkitPlayer().isSneaking() ? this.getSneakPullPower() : this.getPullPower();
+        final boolean sneaking = player.getBukkitPlayer().isSneaking();
+        final int pullPower = sneaking ? this.getSneakPullPower() : this.getPullPower();
 
         if (team == 1) {
             this.ropePosition += pullPower;
@@ -195,16 +229,18 @@ public class G5TugOfWarGame extends ArenaGameBase {
         } else if (team == 2) {
             this.ropePosition -= pullPower;
             this.team2Pulls++;
+        } else {
+            return;
         }
 
-        this.updateVisualRope();
+        player.playSound(this.getPullSound());
+        player.sendActionBar(this.buildPersonalActionBar(player, sneaking));
+        this.broadcastRopeDisplay();
 
         if (this.ropePosition >= this.getWinDistance()) {
             this.finishGame(1);
         } else if (this.ropePosition <= -this.getWinDistance()) {
             this.finishGame(2);
-        } else if (reopenGui) {
-            this.openChallenge(player);
         }
     }
 
@@ -214,11 +250,11 @@ public class G5TugOfWarGame extends ArenaGameBase {
         }
 
         this.finished = true;
-        this.removeVisualRope();
+        this.stopDisplayTask();
         this.getArena().broadcastTitle("games.fifth.finish.title", "games.fifth.finish.subtitle");
 
         if (this.getArena().getState() == ArenaState.IN_GAME) {
-            this.getArena().setInternalTime(1);
+            this.getArena().setInternalTime(6);
         }
 
         final List<SquidPlayer> winners = new ArrayList<>();
@@ -227,14 +263,17 @@ public class G5TugOfWarGame extends ArenaGameBase {
         for (final SquidPlayer player : this.getArena().getPlayers()) {
             this.removeRope(player.getBukkitPlayer());
             player.getBukkitPlayer().closeInventory();
+            player.sendActionBar("");
 
-            if (this.getTeam(player) == winningTeam) {
+            if (winningTeam != 0 && this.getTeam(player) == winningTeam) {
                 this.completed.add(player.getBukkitPlayer().getUniqueId());
                 winners.add(player);
             } else {
                 losers.add(player);
             }
         }
+
+        this.clearInvisibilityFor(winners);
 
         Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
             for (final SquidPlayer player : winners) {
@@ -248,13 +287,23 @@ public class G5TugOfWarGame extends ArenaGameBase {
                 player.playSound(
                         this.getArena().getMainConfig().getSound("game-settings.sounds.player-loss-game", "CAT_HIT"));
             }
-        }, 40L);
+        }, 20L);
 
         Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
-            for (final SquidPlayer loser : losers) {
+            for (final SquidPlayer loser : new ArrayList<>(losers)) {
+                if (!this.getArena().getPlayers().contains(loser)) {
+                    continue;
+                }
+
+                loser.teleport(this.getFallLocation(loser));
+            }
+        }, 30L);
+
+        Bukkit.getScheduler().runTaskLater(SquidGame.getInstance(), () -> {
+            for (final SquidPlayer loser : new ArrayList<>(losers)) {
                 this.getArena().killPlayer(loser);
             }
-        }, 80L);
+        }, 60L);
     }
 
     private void assignTeams() {
@@ -266,73 +315,22 @@ public class G5TugOfWarGame extends ArenaGameBase {
         }
     }
 
-    private void teleportToTeamPlatform(final SquidPlayer player) {
-        final String key = this.getTeam(player) == 1 ? "games.fifth.team1" : "games.fifth.team2";
-        final Location location = this.getArena().getConfig().getLocation(key, false);
-        location.setWorld(this.getArena().getWorld());
+    private void teleportToTeamAnchor(final SquidPlayer player) {
+        final Location location = this.getTeamAnchor(player).clone();
         final Vector direction = this.getTeamLocation(this.getTeam(player) == 1 ? 2 : 1).toVector()
                 .subtract(location.toVector());
         direction.setY(0);
-        location.setDirection(direction);
+
+        if (direction.lengthSquared() > 0) {
+            location.setDirection(direction);
+        }
+
         player.teleport(location);
+        this.anchors.put(player.getBukkitPlayer().getUniqueId(), location.clone());
     }
 
-    private void spawnVisualRope() {
-        if (!this.ropeBlocks.isEmpty()) {
-            return;
-        }
-
-        final Location first = this.getTeamLocation(1).clone();
-        final Location second = this.getTeamLocation(2).clone();
-        final int steps = Math.max(1, (int) first.distance(second));
-
-        for (int i = 0; i <= steps; i++) {
-            final double percentage = (double) i / (double) steps;
-            final int x = (int) Math.round(first.getX() + (second.getX() - first.getX()) * percentage);
-            final int y = (int) Math.round((first.getY() + second.getY()) / 2.0D) + 1;
-            final int z = (int) Math.round(first.getZ() + (second.getZ() - first.getZ()) * percentage);
-            final Block block = this.getArena().getWorld().getBlockAt(x, y, z);
-
-            if (!this.ropeBlocks.containsKey(block)) {
-                this.ropeBlocks.put(block, block.getType());
-                block.setType(Material.COAL_BLOCK);
-            }
-        }
-
-        this.updateVisualRope();
-    }
-
-    private void removeVisualRope() {
-        for (final Map.Entry<Block, Material> entry : this.ropeBlocks.entrySet()) {
-            entry.getKey().setType(entry.getValue());
-        }
-
-        this.ropeBlocks.clear();
-        this.ropeMarker = null;
-    }
-
-    private void updateVisualRope() {
-        if (this.ropeBlocks.isEmpty()) {
-            return;
-        }
-
-        if (this.ropeMarker != null && this.ropeMarker.getType() == Material.GOLD_BLOCK) {
-            this.ropeMarker.setType(Material.COAL_BLOCK);
-        }
-
-        final Location first = this.getTeamLocation(1).clone();
-        final Location second = this.getTeamLocation(2).clone();
-        final double clampedPosition = Math.max(-this.getWinDistance(), Math.min(this.getWinDistance(), this.ropePosition));
-        final double percentage = Math.max(0.0D, Math.min(1.0D, 0.5D - (clampedPosition / (this.getWinDistance() * 2.0D))));
-        final int x = (int) Math.round(first.getX() + (second.getX() - first.getX()) * percentage);
-        final int y = (int) Math.round((first.getY() + second.getY()) / 2.0D) + 1;
-        final int z = (int) Math.round(first.getZ() + (second.getZ() - first.getZ()) * percentage);
-
-        this.ropeMarker = this.getArena().getWorld().getBlockAt(x, y, z);
-
-        if (this.ropeBlocks.containsKey(this.ropeMarker)) {
-            this.ropeMarker.setType(Material.GOLD_BLOCK);
-        }
+    private Location getTeamAnchor(final SquidPlayer player) {
+        return this.getTeamLocation(this.getTeam(player));
     }
 
     private Location getTeamLocation(final int team) {
@@ -340,6 +338,66 @@ public class G5TugOfWarGame extends ArenaGameBase {
         final Location location = this.getArena().getConfig().getLocation(key, false);
         location.setWorld(this.getArena().getWorld());
         return location;
+    }
+
+    private boolean isConfigured() {
+        return this.getArena().getConfig().contains("games.fifth.team1.x")
+                && this.getArena().getConfig().contains("games.fifth.team2.x");
+    }
+
+    private void startDisplayTask() {
+        this.stopDisplayTask();
+        this.displayTask = Bukkit.getScheduler().runTaskTimer(SquidGame.getInstance(), this::broadcastRopeDisplay, 0L,
+                10L);
+    }
+
+    private void stopDisplayTask() {
+        if (this.displayTask != null) {
+            this.displayTask.cancel();
+            this.displayTask = null;
+        }
+    }
+
+    private void broadcastRopeDisplay() {
+        if (!this.isPlaying()) {
+            return;
+        }
+
+        for (final SquidPlayer player : this.getArena().getPlayers()) {
+            player.sendActionBar(this.buildPersonalActionBar(player, false));
+        }
+    }
+
+    private String buildPersonalActionBar(final SquidPlayer player, final boolean pulled) {
+        final int team = this.getTeam(player);
+        final int winDistance = this.getWinDistance();
+        final int clamped = Math.max(-winDistance, Math.min(winDistance, this.ropePosition));
+        final int segments = 21;
+        final int marker = (int) Math.round(((clamped + winDistance) / (double) (winDistance * 2)) * (segments - 1));
+        final StringBuilder bar = new StringBuilder();
+
+        if (pulled) {
+            bar.append("§a§lPULL! §r");
+        }
+
+        bar.append(team == 1 ? "§9§lYOUR TEAM" : "§7Team 1");
+        bar.append(" §8|");
+
+        for (int i = 0; i < segments; i++) {
+            if (i == marker) {
+                bar.append("§e█");
+            } else if (i < marker) {
+                bar.append("§9▌");
+            } else {
+                bar.append("§c▌");
+            }
+        }
+
+        bar.append("§8| ");
+        bar.append(team == 2 ? "§c§lYOUR TEAM" : "§7Team 2");
+        bar.append(" §7(").append(clamped > 0 ? "+" : "").append(clamped).append(")");
+
+        return bar.toString();
     }
 
     private int getTeam(final SquidPlayer player) {
@@ -352,7 +410,7 @@ public class G5TugOfWarGame extends ArenaGameBase {
     }
 
     private int getPullCooldown() {
-        return this.getArena().getMainConfig().getInt("game-settings.tug-of-war-pull-cooldown-ms", 350);
+        return this.getArena().getMainConfig().getInt("game-settings.tug-of-war-pull-cooldown-ms", 150);
     }
 
     private int getSuddenDeathTime() {
@@ -367,56 +425,89 @@ public class G5TugOfWarGame extends ArenaGameBase {
         return this.getArena().getMainConfig().getInt("game-settings.tug-of-war-sneak-pull-power", 5);
     }
 
-    private int getRopePosition() {
-        return this.ropePosition;
+    private void applyInvisibility(final SquidPlayer player) {
+        player.getBukkitPlayer().addPotionEffect(
+                new PotionEffect(PotionEffectType.INVISIBILITY, 20 * 60 * 60, 0), true);
+
+        for (final SquidPlayer other : this.getArena().getPlayers()) {
+            if (other == player) {
+                continue;
+            }
+
+            player.getBukkitPlayer().hidePlayer(other.getBukkitPlayer());
+            other.getBukkitPlayer().hidePlayer(player.getBukkitPlayer());
+        }
     }
 
-    private boolean isCompleted(final SquidPlayer player) {
-        return this.completed.contains(player.getBukkitPlayer().getUniqueId());
+    private void clearInvisibilityFor(final List<SquidPlayer> players) {
+        for (final SquidPlayer player : players) {
+            player.getBukkitPlayer().removePotionEffect(PotionEffectType.INVISIBILITY);
+
+            for (final SquidPlayer other : this.getArena().getAllPlayers()) {
+                if (other == player) {
+                    continue;
+                }
+
+                player.getBukkitPlayer().showPlayer(other.getBukkitPlayer());
+            }
+        }
+    }
+
+    private void clearInvisibility() {
+        for (final SquidPlayer player : this.getArena().getAllPlayers()) {
+            player.getBukkitPlayer().removePotionEffect(PotionEffectType.INVISIBILITY);
+
+            for (final SquidPlayer other : this.getArena().getAllPlayers()) {
+                if (other == player) {
+                    continue;
+                }
+
+                player.getBukkitPlayer().showPlayer(other.getBukkitPlayer());
+            }
+        }
+    }
+
+    private Location getFallLocation(final SquidPlayer player) {
+        final Location anchor = this.anchors.get(player.getBukkitPlayer().getUniqueId());
+
+        if (anchor != null) {
+            return anchor.clone().add(0, -20, 0);
+        }
+
+        return player.getBukkitPlayer().getLocation().clone().add(0, -20, 0);
+    }
+
+    private Sound getPullSound() {
+        return this.getArena().getMainConfig().getSound("game-settings.sounds.tug-of-war-pull", "IRONGOLEM_HIT");
     }
 
     private void giveRope(final Player player) {
+        final ItemStack rope = this.createRopeItem();
+
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            player.getInventory().setItem(slot, rope.clone());
+        }
+
+        player.updateInventory();
+    }
+
+    private ItemStack createRopeItem() {
         final ItemStack rope = new ItemStack(Material.STRING);
         final ItemMeta meta = rope.getItemMeta();
         meta.setDisplayName(MessageUtils.format(SquidGame.getInstance(), "items.tug-of-war-rope"));
         rope.setItemMeta(meta);
-        player.getInventory().addItem(rope);
+        return rope;
     }
 
     private void removeRope(final Player player) {
-        player.getInventory().remove(Material.STRING);
-        player.updateInventory();
-    }
+        for (int slot = 0; slot < player.getInventory().getSize(); slot++) {
+            final ItemStack item = player.getInventory().getItem(slot);
 
-    private static class TugOfWarGUI extends InventoryGUI {
-        private final G5TugOfWarGame game;
-        private final SquidPlayer player;
-
-        public TugOfWarGUI(final G5TugOfWarGame game, final SquidPlayer player) {
-            super("§e§lTug of War", 27);
-            this.game = game;
-            this.player = player;
-        }
-
-        @Override
-        public void init() {
-            final int team = this.game.getTeam(this.player);
-            final int ropePosition = this.game.getRopePosition();
-            final String leader = ropePosition == 0 ? "Even" : ropePosition > 0 ? "Team 1" : "Team 2";
-
-            this.addItem(0, this.createItem("§eTeam §f" + team, Material.STRING,
-                    "§r\n§7Rope position: §f" + ropePosition + "\n§7Leader: §f" + leader
-                            + "\n§7Win distance: §f" + this.game.getWinDistance() + "\n§r"),
-                    5, 2);
-            this.addItem(1, this.createItem("§aHow to pull", Material.LEVER,
-                    "§r\n§7Right-click the rope item to pull.\n§7You can also spam sneak.\n§7Sneaking gives extra force.\n§7The gold block shows rope control.\n§r"), 5, 3);
-        }
-
-        @Override
-        public void handle(final int id, final Player player) {
-            if (id == 1 && !this.game.isCompleted(this.player)) {
-                this.game.handlePullAction(this.player);
+            if (item != null && item.getType() == Material.STRING) {
+                player.getInventory().setItem(slot, null);
             }
         }
+
+        player.updateInventory();
     }
 }

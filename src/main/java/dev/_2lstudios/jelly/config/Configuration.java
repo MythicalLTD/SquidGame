@@ -73,8 +73,10 @@ public class Configuration extends YamlConfiguration {
     }
 
     /* Custom object get and set */
-    private Sound getSound(final String key) {
-        final String name = this.getString(key);
+    private Sound resolveSoundName(final String name) {
+        if (name == null || name.isEmpty()) {
+            return null;
+        }
 
         for (final Sound sound : Sound.values()) {
             if (name.equals(sound.name())) {
@@ -82,13 +84,84 @@ public class Configuration extends YamlConfiguration {
             }
         }
 
-        Bukkit.getLogger().warning("Couldn't load sound '" + name + "' from configuration file! (Invalid name?)");
         return null;
     }
 
     public Sound getSound(final String key, final String defaultValue) {
         this.setIfNotExist(key, defaultValue);
-        return this.getSound(key);
+        final Sound configured = this.resolveSoundName(this.getString(key));
+
+        if (configured != null) {
+            return configured;
+        }
+
+        final Sound fallback = this.resolveSoundName(defaultValue);
+
+        if (fallback != null) {
+            Bukkit.getLogger().warning("Couldn't load sound '" + this.getString(key)
+                    + "' from configuration file! Using default '" + defaultValue + "'.");
+            return fallback;
+        }
+
+        return null;
+    }
+
+    public String getSoundName(final String key, final String defaultValue) {
+        this.setIfNotExist(key, defaultValue);
+        return this.normalizeSoundName(this.getString(key, defaultValue));
+    }
+
+    private String normalizeSoundName(final String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+
+        if (name.contains(".")) {
+            return name.toLowerCase();
+        }
+
+        switch (name.toUpperCase()) {
+        case "RECORD_CAT":
+        case "MUSIC_DISC_CAT":
+            return "records.cat";
+        case "RECORD_13":
+        case "MUSIC_DISC_13":
+            return "records.13";
+        case "RECORD_BLOCKS":
+        case "MUSIC_DISC_BLOCKS":
+            return "records.blocks";
+        case "RECORD_CHIRP":
+        case "MUSIC_DISC_CHIRP":
+            return "records.chirp";
+        case "RECORD_FAR":
+        case "MUSIC_DISC_FAR":
+            return "records.far";
+        case "RECORD_MALL":
+        case "MUSIC_DISC_MALL":
+            return "records.mall";
+        case "RECORD_MELLOHI":
+        case "MUSIC_DISC_MELLOHI":
+            return "records.mellohi";
+        case "RECORD_STAL":
+        case "MUSIC_DISC_STAL":
+            return "records.stal";
+        case "RECORD_STRAD":
+        case "MUSIC_DISC_STRAD":
+            return "records.strad";
+        case "RECORD_WAIT":
+        case "MUSIC_DISC_WAIT":
+            return "records.wait";
+        case "RECORD_WARD":
+        case "MUSIC_DISC_WARD":
+            return "records.ward";
+        case "RECORD_11":
+        case "MUSIC_DISC_11":
+            return "records.11";
+        case "RECORD_3":
+            return "records.cat";
+        default:
+            return name;
+        }
     }
 
     public Sound getSound(final String key, final Sound defaultValue) {

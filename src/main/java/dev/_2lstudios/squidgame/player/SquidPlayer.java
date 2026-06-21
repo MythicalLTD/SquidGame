@@ -8,12 +8,17 @@ import dev._2lstudios.jelly.player.PluginPlayer;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.hooks.PlaceholderAPIHook;
+import dev._2lstudios.squidgame.utils.CompatibilityUtils;
 
 public class SquidPlayer extends PluginPlayer {
 
     private Arena arena = null;
     private PlayerWand wand = null;
     private boolean spectator = false;
+    private String cosmeticId = "none";
+    private String musicCosmeticId = "none";
+    private boolean musicMuted = false;
+    private int musicVolume = 100;
 
     private final SquidGame plugin;
 
@@ -36,13 +41,7 @@ public class SquidPlayer extends PluginPlayer {
     }
 
     public void setArena(final Arena arena) {
-        if (arena == null && this.arena != null) {
-            this.arena.removePlayer(this);
-            this.arena = null;
-        } else if (arena != null && this.arena == null) {
-            this.arena = arena;
-            arena.addPlayer(this);
-        }
+        this.arena = arena;
     }
 
     public boolean isSpectator() {
@@ -56,6 +55,38 @@ public class SquidPlayer extends PluginPlayer {
         } else {
             this.getBukkitPlayer().setGameMode(GameMode.SURVIVAL);
         }
+    }
+
+    public String getCosmeticId() {
+        return this.cosmeticId;
+    }
+
+    public void setCosmeticId(final String cosmeticId) {
+        this.cosmeticId = cosmeticId == null ? "none" : cosmeticId;
+    }
+
+    public String getMusicCosmeticId() {
+        return this.musicCosmeticId;
+    }
+
+    public void setMusicCosmeticId(final String musicCosmeticId) {
+        this.musicCosmeticId = musicCosmeticId == null ? "none" : musicCosmeticId;
+    }
+
+    public boolean isMusicMuted() {
+        return this.musicMuted;
+    }
+
+    public void setMusicMuted(final boolean musicMuted) {
+        this.musicMuted = musicMuted;
+    }
+
+    public int getMusicVolume() {
+        return this.musicVolume;
+    }
+
+    public void setMusicVolume(final int musicVolume) {
+        this.musicVolume = Math.max(10, Math.min(100, musicVolume));
     }
 
     public void teleportToLobby() {
@@ -88,8 +119,26 @@ public class SquidPlayer extends PluginPlayer {
         super.sendTitle(this.formatMessage(title), this.formatMessage(subtitle), duration);
     }
 
+    public void sendTitleRaw(final String title, final String subtitle, final int duration) {
+        super.sendTitle(title, subtitle, duration);
+    }
+
     public void sendScoreboard(final String scoreboardKey) {
         this.plugin.getScoreboardHook().request(this.getBukkitPlayer(),
                 this.plugin.getScoreboardConfig().getStringList(scoreboardKey));
+    }
+
+    public void refreshScoreboard() {
+        if (this.arena == null) {
+            this.sendScoreboard("lobby");
+            return;
+        }
+
+        this.sendScoreboard(this.arena.getState().toString().toLowerCase());
+    }
+
+    @SuppressWarnings("deprecation")
+    public void sendActionBar(final String message) {
+        CompatibilityUtils.sendActionBar(this.getBukkitPlayer(), message);
     }
 }

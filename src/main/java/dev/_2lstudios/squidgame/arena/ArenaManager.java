@@ -36,20 +36,43 @@ public class ArenaManager {
     }
 
     public void scanForArenas() throws IOException {
-        for (final File fileEntry : this.arenasPath.listFiles()) {
+        final File[] arenaFiles = this.arenasPath.listFiles();
+
+        if (arenaFiles == null) {
+            SquidGame.getInstance().getLogger().warning("Could not read arena directory: " + this.arenasPath.getPath());
+            return;
+        }
+
+        for (final File fileEntry : arenaFiles) {
             if (!fileEntry.isDirectory() && fileEntry.getName().endsWith(".yml")) {
                 final Configuration arenaConfig = new Configuration(fileEntry);
 
                 try {
                     arenaConfig.load();
                 } catch (Exception e) {
+                    SquidGame.getInstance().getLogger().warning(
+                            "Failed to load arena config '" + fileEntry.getName() + "': " + e.getMessage());
+                    continue;
                 }
 
                 final String name = fileEntry.getName().split("[.]")[0];
+                final String worldName = arenaConfig.getString("arena.world");
 
-                World world = Bukkit.getWorld(arenaConfig.getString("arena.world"));
+                if (worldName == null || worldName.isEmpty()) {
+                    SquidGame.getInstance().getLogger().warning(
+                            "Skipping arena '" + name + "' because arena.world is not configured.");
+                    continue;
+                }
+
+                World world = Bukkit.getWorld(worldName);
                 if (world == null) {
-                    world = new WorldCreator(arenaConfig.getString("arena.world")).createWorld();
+                    world = new WorldCreator(worldName).createWorld();
+                }
+
+                if (world == null) {
+                    SquidGame.getInstance().getLogger().warning(
+                            "Skipping arena '" + name + "' because world '" + worldName + "' could not be loaded.");
+                    continue;
                 }
 
                 final Arena arena = new Arena(world, name, arenaConfig);

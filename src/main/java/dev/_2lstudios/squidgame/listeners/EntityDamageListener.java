@@ -16,6 +16,8 @@ import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.arena.ArenaState;
 import dev._2lstudios.squidgame.arena.games.G10HideAndSeekGame;
 import dev._2lstudios.squidgame.arena.games.G12SkySquidGame;
+import dev._2lstudios.squidgame.arena.games.G6GlassesGame;
+import dev._2lstudios.squidgame.arena.games.G8MingleGame;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 
 public class EntityDamageListener implements Listener {
@@ -37,15 +39,22 @@ public class EntityDamageListener implements Listener {
 
         if (entity instanceof Player) {
             final SquidPlayer player = (SquidPlayer) this.plugin.getPlayerManager().getPlayer((Player) entity);
+
             if (player != null && player.getArena() != null) {
                 final Arena arena = player.getArena();
 
-                if (player.isSpectator()) {
+                if (player.isSpectator() || !arena.getPlayers().contains(player)) {
                     e.setCancelled(true);
                     return;
                 }
 
                 if (e.getCause() == DamageCause.FALL && arena.getState() != ArenaState.IN_GAME) {
+                    e.setCancelled(true);
+                }
+
+                if (e.getCause() == DamageCause.FALL && arena.getState() == ArenaState.IN_GAME
+                        && arena.getCurrentGame() instanceof G8MingleGame
+                        && ((G8MingleGame) arena.getCurrentGame()).shouldCancelFallDamage()) {
                     e.setCancelled(true);
                 }
 
@@ -66,35 +75,95 @@ public class EntityDamageListener implements Listener {
 
                 if (!e.isCancelled() && e instanceof EntityDamageByEntityEvent
                         && arena.getCurrentGame() instanceof G10HideAndSeekGame) {
-                    final Entity damager = ((EntityDamageByEntityEvent) e).getDamager();
+                    final EntityDamageByEntityEvent damageEvent = (EntityDamageByEntityEvent) e;
+                    final Entity damager = damageEvent.getDamager();
 
                     if (damager instanceof Player) {
                         final SquidPlayer attacker = (SquidPlayer) this.plugin.getPlayerManager()
                                 .getPlayer((Player) damager);
+                        final G10HideAndSeekGame game = (G10HideAndSeekGame) arena.getCurrentGame();
 
-                        if (((G10HideAndSeekGame) arena.getCurrentGame()).handlePlayerAttack(attacker, player,
-                                fatalDamage)) {
-                            e.setCancelled(true);
+                        if (game.handlePlayerDamage(attacker, player, damageEvent)) {
+                            return;
+                        }
+
+                        final boolean updatedFatalDamage = player.getBukkitPlayer().getHealth()
+                                - damageEvent.getDamage() <= 0;
+                        game.handlePlayerAttack(attacker, player, updatedFatalDamage);
+                    }
+                }
+
+                if (!e.isCancelled() && arena.getCurrentGame() instanceof G8MingleGame) {
+                    final G8MingleGame mingleGame = (G8MingleGame) arena.getCurrentGame();
+
+                    if (e instanceof EntityDamageByEntityEvent) {
+                        final Entity damager = ((EntityDamageByEntityEvent) e).getDamager();
+
+                        if (damager instanceof Player) {
+                            final SquidPlayer attacker = (SquidPlayer) this.plugin.getPlayerManager()
+                                    .getPlayer((Player) damager);
+
+                            if (mingleGame.handleKnockback(attacker, player, (EntityDamageByEntityEvent) e)) {
+                                return;
+                            }
                         }
                     }
                 }
 
-                if (!e.isCancelled() && fatalDamage && e instanceof EntityDamageByEntityEvent
-                        && arena.getCurrentGame() instanceof G12SkySquidGame) {
-                    final Entity damager = ((EntityDamageByEntityEvent) e).getDamager();
+                if (!e.isCancelled() && arena.getState() == ArenaState.IN_GAME
+                        && arena.getCurrentGame() instanceof G6GlassesGame) {
+                    final G6GlassesGame glassesGame = (G6GlassesGame) arena.getCurrentGame();
 
-                    if (damager instanceof Player) {
-                        final SquidPlayer attacker = (SquidPlayer) this.plugin.getPlayerManager()
-                                .getPlayer((Player) damager);
+                    if (glassesGame.isBelowDeathLevel(player.getBukkitPlayer().getLocation())
+                            || e.getCause() == DamageCause.VOID) {
+                        arena.killPlayer(player);
+                        e.setCancelled(true);
+                        return;
+                    }
+                }
 
-                        if (((G12SkySquidGame) arena.getCurrentGame()).handlePlayerKill(attacker, player)) {
-                            e.setCancelled(true);
+                if (!e.isCancelled() && arena.getCurrentGame() instanceof G12SkySquidGame) {
+                    final G12SkySquidGame skySquidGame = (G12SkySquidGame) arena.getCurrentGame();
+
+                    if (e instanceof EntityDamageByEntityEvent) {
+                        final Entity damager = ((EntityDamageByEntityEvent) e).getDamager();
+
+                        if (damager instanceof Player) {
+                            final SquidPlayer attacker = (SquidPlayer) this.plugin.getPlayerManager()
+                                    .getPlayer((Player) damager);
+
+                            if (skySquidGame.handleKnockback(attacker, player, (EntityDamageByEntityEvent) e)) {
+                                return;
+                            }
+                        }
+                    }
+
+                    if (skySquidGame.isFightingPhase()) {
+                        final boolean lethal = player.getBukkitPlayer().getHealth() - e.getDamage() <= 0;
+
+                        if (lethal && (e.getCause() == DamageCause.FALL || e.getCause() == DamageCause.VOID)) {
+                            skySquidGame.markEliminationAndAdvance();
                         }
                     }
                 }
 
-                if (!e.isCancelled() && player.getBukkitPlayer().getHealth() - e.getDamage() <= 0
-                        && !player.isSpectator()) {
+                if (!e.isCancelled() && arena.canEliminatePlayers() && arena.getPlayers().contains(player)
+                        && !player.isSpectator()
+                        && player.getBukkitPlayer().getHealth() - e.getDamage() <= 0) {
+                    if (arena.getCurrentGame() instanceof G10HideAndSeekGame) {
+                        SquidPlayer attacker = null;
+
+                        if (e instanceof EntityDamageByEntityEvent) {
+                            final Entity damager = ((EntityDamageByEntityEvent) e).getDamager();
+
+                            if (damager instanceof Player) {
+                                attacker = (SquidPlayer) this.plugin.getPlayerManager().getPlayer((Player) damager);
+                            }
+                        }
+
+                        ((G10HideAndSeekGame) arena.getCurrentGame()).handlePlayerDeath(player, attacker);
+                    }
+
                     arena.killPlayer(player);
                     e.setCancelled(true);
                 }

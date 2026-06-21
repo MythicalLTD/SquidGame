@@ -38,7 +38,25 @@ public class CommandArguments {
     }
 
     public int getInt(final int index, final int defaultValue) {
-        return (int) this.get(index, defaultValue);
+        final Object value = this.get(index);
+
+        if (value == null) {
+            return defaultValue;
+        }
+
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (final NumberFormatException exception) {
+                return defaultValue;
+            }
+        }
+
+        return defaultValue;
     }
 
     public int getInt(final int index) {

@@ -1,10 +1,8 @@
 package dev._2lstudios.squidgame.arena.games;
 
-import org.bukkit.Location;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import dev._2lstudios.jelly.config.Configuration;
 import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 
@@ -13,17 +11,8 @@ public class G3BattleGame extends ArenaGameBase {
     private final int durationTime;
 
     public G3BattleGame(final Arena arena, final int durationTime) {
-        super("§cBattle", "third", durationTime, arena);
+        super("§8Lights Off", "third", durationTime, arena);
         this.durationTime = durationTime;
-    }
-
-    @Override
-    public Location getSpawnPosition() {
-        final Configuration config = this.getArena().getConfig();
-        final Location location = config.contains("games.third.spawn.x") ? config.getLocation("games.third.spawn", false)
-                : config.getLocation("arena.waiting_room", false);
-        location.setWorld(this.getArena().getWorld());
-        return location;
     }
 
     @Override

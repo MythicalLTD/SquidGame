@@ -27,10 +27,8 @@ public class EditArenaGUI extends InventoryGUI {
                 2, 2);
 
         this.addItem(3, this.createItem(MessageUtils.format(plugin, "games.third.name"), Material.DIAMOND_SWORD,
-                "§r\n§cBattle §7spawn setup.\n§r"),
+                "§r\n§8Lights Off §7spawn setup.\n§r"),
                 3, 2);
-        this.addItem(4, this.createItem(MessageUtils.format(plugin, "games.fourth.name"), Material.CLAY_BALL,
-                "§r\n§bMarbles §7game.\n§r"), 4, 2);
         this.addItem(5, this.createItem(MessageUtils.format(plugin, "games.fifth.name"), Material.STRING,
                 "§r\n§eTug of War §7game.\n§r"), 5, 2);
 
@@ -40,8 +38,6 @@ public class EditArenaGUI extends InventoryGUI {
                 "§r\n§dMingle §7game.\n§r"), 7, 2);
         this.addItem(10, this.createItem(MessageUtils.format(plugin, "games.hide-and-seek.name"), Material.IRON_SWORD,
                 "§r\n§9Hide and Seek §7game.\n§r"), 3, 3);
-        this.addItem(11, this.createItem(MessageUtils.format(plugin, "games.jump-rope.name"), Material.IRON_BLOCK,
-                "§r\n§eJump Rope §7game.\n§r"), 4, 3);
         this.addItem(12, this.createItem(MessageUtils.format(plugin, "games.final-dinner.name"), Material.CAKE,
                 "§r\n§6Final Dinner §7interlude.\n§r"), 5, 3);
         this.addItem(13, this.createItem(MessageUtils.format(plugin, "games.sky-squid.name"), Material.GOLD_BLOCK,
@@ -64,9 +60,6 @@ public class EditArenaGUI extends InventoryGUI {
         case 3:
             new EditArenaGame3GUI(this.arena, this).open(player);
             break;
-        case 4:
-            new EditArenaGame4GUI(this.arena, this).open(player);
-            break;
         case 5:
             new EditArenaGame5GUI(this.arena, this).open(player);
             break;
@@ -78,9 +71,6 @@ public class EditArenaGUI extends InventoryGUI {
             break;
         case 10:
             new EditArenaHideAndSeekGUI(this.arena, this).open(player);
-            break;
-        case 11:
-            new EditArenaJumpRopeGUI(this.arena, this).open(player);
             break;
         case 12:
             new EditArenaFinalDinnerGUI(this.arena, this).open(player);

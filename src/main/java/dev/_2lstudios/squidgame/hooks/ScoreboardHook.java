@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 
 import dev._2lstudios.squidgame.player.SquidPlayer;
+import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.swiftboard.SwiftBoard;
 
 public class ScoreboardHook {
@@ -33,9 +34,11 @@ public class ScoreboardHook {
 
     private List<String> formatLines(final Player player, final List<String> lines) {
         final List<String> formatted = new ArrayList<>();
+        final SquidGame plugin = SquidGame.getInstance();
 
         for (final String line : lines) {
-            formatted.add(ChatColor.translateAlternateColorCodes('&', PlaceholderAPIHook.formatString(line, player)));
+            final String resolved = SquidPlaceholders.format(plugin, player, line);
+            formatted.add(ChatColor.translateAlternateColorCodes('&', resolved));
         }
 
         return formatted;

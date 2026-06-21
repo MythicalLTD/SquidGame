@@ -20,13 +20,6 @@ public class G12FinalDinnerGame extends ArenaGameBase {
     }
 
     @Override
-    public Location getSpawnPosition() {
-        final Location location = this.getArena().getConfig().getLocation("games.final-dinner.spawn", false);
-        location.setWorld(this.getArena().getWorld());
-        return location;
-    }
-
-    @Override
     public void onStart() {
         this.playing = true;
         this.getArena().setPvPAllowed(true);

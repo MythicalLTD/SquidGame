@@ -24,6 +24,12 @@ public class PlayerQuitListener implements Listener {
         if (squidPlayer != null && squidPlayer.getArena() != null) {
             squidPlayer.getArena().removePlayer(squidPlayer);
         }
+
+        if (squidPlayer != null) {
+            this.plugin.getCosmeticManager().savePlayerPreferences(squidPlayer);
+            this.plugin.getNbsMusicManager().stopLobbyMusic(squidPlayer);
+            this.plugin.getPlayerDataManager().unloadPlayer(e.getPlayer().getUniqueId());
+        }
     }
 
     private boolean isProxySilent() {

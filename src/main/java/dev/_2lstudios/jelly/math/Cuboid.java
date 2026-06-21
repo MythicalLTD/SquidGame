@@ -35,6 +35,23 @@ public class Cuboid {
         return this.isBetween(xP, zP);
     }
 
+    public boolean isBetween3D(final Location target) {
+        return this.isBetween3D(target, 0.0D);
+    }
+
+    public boolean isBetween3D(final Location target, final double verticalPadding) {
+        final double minX = Math.min(this.firstPoint.getX(), this.secondPoint.getX());
+        final double maxX = Math.max(this.firstPoint.getX(), this.secondPoint.getX());
+        final double minY = Math.min(this.firstPoint.getY(), this.secondPoint.getY()) - verticalPadding;
+        final double maxY = Math.max(this.firstPoint.getY(), this.secondPoint.getY()) + verticalPadding;
+        final double minZ = Math.min(this.firstPoint.getZ(), this.secondPoint.getZ());
+        final double maxZ = Math.max(this.firstPoint.getZ(), this.secondPoint.getZ());
+
+        return target.getX() >= minX && target.getX() <= maxX
+                && target.getY() >= minY && target.getY() <= maxY
+                && target.getZ() >= minZ && target.getZ() <= maxZ;
+    }
+
     public Vector3 getFirstPoint() {
         return this.firstPoint;
     }

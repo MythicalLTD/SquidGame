@@ -8,6 +8,7 @@ import org.bukkit.Color;
 
 import dev._2lstudios.jelly.config.Configuration;
 import dev._2lstudios.squidgame.SquidGame;
+import dev._2lstudios.squidgame.arena.games.ArenaGameBase;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 import dev._2lstudios.squidgame.utils.MessageUtils;
 
@@ -67,6 +68,14 @@ public class ArenaHandler {
 
     public void handleArenaStart() {
         arena.removeStartItems();
+
+        final SquidGame plugin = SquidGame.getInstance();
+        final int participationCoins = plugin.getMainConfig().getInt("economy.rewards.participation-coins", 15);
+
+        for (final SquidPlayer player : this.arena.getPlayers()) {
+            plugin.getPlayerDataManager().recordGamePlayed(player, participationCoins);
+        }
+
         if (!this.isProxySilent()) {
             arena.broadcastMessage("arena.started");
         }
@@ -97,10 +106,16 @@ public class ArenaHandler {
 
         else if (arena.getState() == ArenaState.EXPLAIN_GAME) {
             if (arena.getInternalTime() == 0) {
-                this.arena.setInternalTime(this.arena.getCurrentGame().getGameTime());
+                final ArenaGameBase game = arena.getCurrentGame();
+
+                this.arena.setInternalTime(game.getGameTime());
                 this.arena.setState(ArenaState.IN_GAME);
                 this.arena.setPvPAllowed(false);
-                this.arena.getCurrentGame().onStart();
+                game.prepareStart();
+
+                if (!game.delaysLobbyRemovalUntilPlayBegins()) {
+                    game.endGameLobby();
+                }
             }
         }
 
@@ -115,16 +130,6 @@ public class ArenaHandler {
         else if (arena.getState() == ArenaState.FINISHING_GAME) {
             if (arena.getInternalTime() == 0) {
                 this.arena.nextGame();
-            }
-        }
-
-        else if (arena.getState() == ArenaState.INTERMISSION) {
-            if (arena.getInternalTime() == 0) {
-                arena.setInternalTime(15);
-                arena.setState(ArenaState.EXPLAIN_GAME);
-                arena.teleportAllPlayers(arena.getSpawnPosition());
-                arena.setPvPAllowed(false);
-                arena.getCurrentGame().onExplainStart();
             }
         }
 
@@ -153,13 +158,26 @@ public class ArenaHandler {
         case ONE_PLAYER_IN_ARENA:
             this.arena.broadcastTitle("events.finish.winner.title", "events.finish.winner.subtitle");
 
+            final SquidPlayer winner = this.arena.calculateWinner();
+            if (winner == null || this.arena.hasGrantedWinReward()) {
+                break;
+            }
+
+            this.arena.markWinRewardGranted();
+
+            final SquidGame plugin = SquidGame.getInstance();
+            final int winCoins = plugin.getMainConfig().getInt("economy.rewards.win-coins", 100);
+            plugin.getPlayerDataManager().recordWin(winner, winCoins);
+            MessageUtils.send(plugin, winner.getBukkitPlayer(), "economy.win-reward", "{coins}",
+                    String.valueOf(winCoins));
+
             // Give rewards
             final List<String> rewardCommands = this.mainConfig.getStringList("game-settings.rewards",
                     new ArrayList<>());
 
             for (final String reward : rewardCommands) {
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(),
-                        reward.replace("{winner}", arena.calculateWinner().getBukkitPlayer().getName()));
+                        reward.replace("{winner}", winner.getBukkitPlayer().getName()));
             }
 
             break;

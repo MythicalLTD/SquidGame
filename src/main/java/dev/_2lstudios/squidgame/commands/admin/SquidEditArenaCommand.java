@@ -14,12 +14,10 @@ import dev._2lstudios.squidgame.arena.Arena;
 import dev._2lstudios.squidgame.gui.EditArenaFinalDinnerGUI;
 import dev._2lstudios.squidgame.gui.EditArenaGame1GUI;
 import dev._2lstudios.squidgame.gui.EditArenaGame3GUI;
-import dev._2lstudios.squidgame.gui.EditArenaGame4GUI;
 import dev._2lstudios.squidgame.gui.EditArenaGame5GUI;
 import dev._2lstudios.squidgame.gui.EditArenaGame6GUI;
 import dev._2lstudios.squidgame.gui.EditArenaGUI;
 import dev._2lstudios.squidgame.gui.EditArenaHideAndSeekGUI;
-import dev._2lstudios.squidgame.gui.EditArenaJumpRopeGUI;
 import dev._2lstudios.squidgame.gui.EditArenaMingleGUI;
 import dev._2lstudios.squidgame.gui.EditArenaSkySquidGUI;
 import dev._2lstudios.squidgame.gui.EditArenaWaitingLobbyGUI;
@@ -31,9 +29,9 @@ import dev._2lstudios.jelly.gui.InventoryGUI;
         String.class, String.class }, minArguments = 1)
 public class SquidEditArenaCommand extends CommandListener {
     private static final String[] GAME_KEYS = new String[] { "lobby", "waiting", "intermission", "1", "redlight",
-            "redgreenlight", "red-light-green-light", "3", "battle", "4", "marbles", "5", "tug", "tugofwar",
+            "redgreenlight", "red-light-green-light", "3", "battle", "lightsoff", "lights-off", "5", "tug", "tugofwar",
             "tug-of-war", "6", "glass", "glasses", "glassbridge", "glass-bridge", "8", "mingle", "10",
-            "hideandseek", "hide-and-seek", "11", "jumprope", "jump-rope", "12", "finaldinner",
+            "hideandseek", "hide-and-seek", "12", "finaldinner",
             "final-dinner", "13", "skysquid", "sky-squid" };
 
     @Override
@@ -96,10 +94,9 @@ public class SquidEditArenaCommand extends CommandListener {
             return new EditArenaGame1GUI(arena, mainGui);
         case "3":
         case "battle":
+        case "lightsoff":
+        case "lights-off":
             return new EditArenaGame3GUI(arena, mainGui);
-        case "4":
-        case "marbles":
-            return new EditArenaGame4GUI(arena, mainGui);
         case "5":
         case "tug":
         case "tugofwar":
@@ -118,10 +115,6 @@ public class SquidEditArenaCommand extends CommandListener {
         case "hideandseek":
         case "hide-and-seek":
             return new EditArenaHideAndSeekGUI(arena, mainGui);
-        case "11":
-        case "jumprope":
-        case "jump-rope":
-            return new EditArenaJumpRopeGUI(arena, mainGui);
         case "12":
         case "finaldinner":
         case "final-dinner":

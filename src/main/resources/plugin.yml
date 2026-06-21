@@ -5,10 +5,11 @@ main: ${mainClass}
 version: ${version}
 api-version: 1.13
 api: 1.13
-softdepends: ["PlaceholderAPI", "SwiftBoard"]
+softdepends: ["PlaceholderAPI", "SwiftBoard", "NoteBlockAPI"]
 softdepend:
   - "PlaceholderAPI"
   - "SwiftBoard"
+  - "NoteBlockAPI"
 url: ${url}
 commands:
   squidgame:
